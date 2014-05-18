@@ -67,4 +67,52 @@ use XML::Parser;
 use Cairo;
 use Image::SVG::Path;
 our $VERSION = 0.01;
+
+sub new
+{
+    return bless {};
+}
+
+sub render
+{
+    my ($self, $file) = @_;
+    die unless -f $file;
+    my $p = XML::Parser->new (
+	Handlers => {
+	    Start => sub {
+		handle_start ($self, @_);
+	    },
+	},
+    );
+    $p->parsefile ($file);
+}
+
+sub handle_start
+{
+    my ($self, $parser, $tag, %attr) = @_;
+    if ($tag eq 'path') {
+	my $d = $attr{d};
+	die unless $d;
+	my @path_info = extract_path_info ($d, {
+	    absolute => 1,
+	    no_shortcuts => 1,
+	});
+    }
+    elsif ($tag eq 'polygon') {
+	my $points = $attr{points};
+	my @points = split /,|\s+/, $points;
+	die if @points % 2 != 0;
+    }
+    elsif ($tag eq 'line') {
+	my ($x1, $x2, $y1, $y2) = @attr{qw/x1 x2 y1 y2/};
+    }
+    elsif ($tag eq 'svg' ||
+	   $tag eq 'title') {
+	;
+    }
+    else {
+	print "$tag\n";
+    }
+}
+
 1;
