@@ -78,8 +78,33 @@ use Cairo;
 use Image::SVG::Path;
 our $VERSION = 0.01;
 
+our $default_surface_type = 'argb32';
+our $default_surface_size = 100;
+
+=head2 new
+
+    my $cairosvg = Image::CairoSVG->new (
+        surface => Cairo::ImageSurface->create ('argb32', 100, 100)
+    );
+
+If a surface is not provided, this creates a L<Cairo::ImageSurface> of
+dimensions 100 by 100 of rgba format.
+
+=cut
+
 sub new
 {
+    my ($class, %options) = @_;
+    my $surface = $options{surface};
+    if (! $surface) {
+	$surface = Cairo::ImageSurface->create (
+	    $default_surface_type,
+	    $default_surface_size,
+	    $default_surface_size,
+	);
+    }
+    my $self = {};
+    $self->{surface} = $surface;
     return bless {};
 }
 
