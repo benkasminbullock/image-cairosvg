@@ -51,6 +51,16 @@ Draw an SVG into a Cairo surface.
 
 =back
 
+=head1 SEE ALSO
+
+=head2 CPAN
+
+=head2 Other
+
+=head3 CairoSVG
+
+L<http://cairosvg.org/|CairoSVG> is a Python SVG renderer in Cairo.
+
 =cut
 
 package Image::CairoSVG;
