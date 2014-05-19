@@ -13,7 +13,8 @@ WriteMakefile (
     AUTHOR => 'Ben Bullock <bkb@cpan.org>',
     LICENSE => 'perl',
     PREREQ_PM => {
-	'Image::SVG::Path' => '0.16',
+	# Found lots of bugs in this so version needs to be this high.
+	'Image::SVG::Path' => '0.18',
 	'XML::Parser' => '0',
 	'Cairo' => '0',
     },
