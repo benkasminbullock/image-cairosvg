@@ -13,6 +13,9 @@ WriteMakefile (
     AUTHOR => 'Ben Bullock <bkb@cpan.org>',
     LICENSE => 'perl',
     PREREQ_PM => {
+	'Image::SVG::Path' => '0.16',
+	'XML::Parser' => '0',
+	'Cairo' => '0',
     },
     META_MERGE => {
 	'meta-spec' => {
