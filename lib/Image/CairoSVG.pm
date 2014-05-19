@@ -401,4 +401,8 @@ full SVG renderer. So if you find the module doesn't do some part of
 SVG which you want done, please add that to the module and if possible
 contribute your addition to this module via git.
 
+=head1 LICENCE, COPYRIGHT, AUTHOR
+
+Copyright 2014 Ben Bullock bkb@cpan.org. Licence = Perl (Artistic + GNU).
+
 =cut
