@@ -207,7 +207,7 @@ sub polygon
 	$cr->line_to ($x, $y);
     }
     $cr->close_path ();
-    $self->do_stupid_svg_crap (%attr);
+    $self->do_svg_attr (%attr);
 }
 
 =head2 path
@@ -289,7 +289,7 @@ sub path
 	    croak "Unknown SVG path key '$key'";
 	}
     }
-    $self->do_stupid_svg_crap (%attr);
+    $self->do_svg_attr (%attr);
 }
 
 # Quadratic bezier curve shim for Cairo
@@ -341,7 +341,7 @@ sub line
     my $cr = $self->{cr};
     $cr->move_to ($attr{x1}, $attr{y1});
     $cr->line_to ($attr{x2}, $attr{y2});
-    $self->do_stupid_svg_crap (%attr);
+    $self->do_svg_attr (%attr);
 }
 
 sub convert_svg_units
@@ -357,7 +357,7 @@ sub convert_svg_units
 # We have a path in the cairo surface and now we have to do the SVG
 # crap specified by "%attr".
 
-sub do_stupid_svg_crap
+sub do_svg_attr
 {
     my ($self, %attr) = @_;
     confess "Nothing to do" unless keys %attr > 0;
@@ -392,3 +392,13 @@ sub surface
 }
 
 1;
+
+=head1 BUGS
+
+This module is a "least effort" attempt to get the parts of SVG which
+the author needs rendered rendered. It doesn't even pretend to be a
+full SVG renderer. So if you find the module doesn't do some part of
+SVG which you want done, please add that to the module and if possible
+contribute your addition to this module via git.
+
+=cut
