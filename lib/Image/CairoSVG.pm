@@ -221,7 +221,7 @@ sub handle_start
 	$self->{attr} = \%attr;
     }
     else {
-	warn "Unknown tag '$tag' in $self->{file}";
+#	warn "Unknown tag '$tag' in $self->{file}";
     }
 
     # http://www.princexml.com/doc/7.1/svg/
@@ -449,7 +449,7 @@ sub svg_arc
     my $ry = $element->{ry};
     my $x3 = $element->{x};
     my $y3 = $element->{y};
-    my $x_axis_rotation = $element->{x_axis_rotation};
+    my $x_axis_rotation = (M_PI * $element->{x_axis_rotation})/180;
     my $large_arc_flag = $element->{large_arc_flag};
     my $sweep_flag = $element->{sweep_flag};
 
@@ -497,6 +497,7 @@ sub svg_arc
     $cr->save ();
 
     $cr->translate ($x1, $y1);
+    $cr->rotate ($x_axis_rotation);
     if ($sweep_flag) {
 	$cr->arc ($xc, $yc, $rx, $angle1, $angle2);
     }
