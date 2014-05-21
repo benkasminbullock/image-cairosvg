@@ -155,7 +155,7 @@ Render F<$file> onto the Cairo surface of C<$self>.
 sub render
 {
     my ($self, $file) = @_;
-    die unless -f $file;
+    croak "No such file '$file'" unless -f $file;
     $self->{file} = $file;
     my $p = XML::Parser->new (
 	Handlers => {
@@ -600,6 +600,16 @@ sub do_svg_attr
 
 #    confess "Nothing to do" unless keys %attr > 0;
 
+    # Barking insanity
+    
+    if ($attr{style}) {
+	my @styles = split /;/, $attr{style};
+	for (@styles) {
+	    my ($key, $value) = split /:/, $_, 2;
+	    # Is this the way to do it?
+	    $attr{$key} = $value;
+	}
+    }
     my $fill = $attr{fill};
     my $stroke = $attr{stroke};
     my $cr = $self->{cr};
@@ -608,6 +618,7 @@ sub do_svg_attr
 	$stroke_width = $self->convert_svg_units ($stroke_width);
 	$cr->set_line_width ($stroke_width);
     }
+
     if ($fill && $fill ne 'none') {
 	if ($stroke && $stroke ne 'none') {
 	    $self->set_colour ($fill);
@@ -624,6 +635,10 @@ sub do_svg_attr
 	$self->set_colour ($stroke);
 	$cr->stroke ();
     }
+    elsif (! $fill && ! $stroke) {
+	# Fill seems to be the default.
+	$cr->fill ();
+    }
 }
 
 sub set_colour
@@ -632,6 +647,7 @@ sub set_colour
     my $cr = $self->{cr};
     # Hex digit
     my $h = qr/[0-9a-f]/i;
+    my $hh = qr/$h$h/;
     if ($colour eq 'black') {
 	$cr->set_source_rgb (0, 0, 0);
     }
@@ -639,6 +655,9 @@ sub set_colour
 	$cr->set_source_rgb (1, 1, 1);
     }
     elsif ($colour =~ /^#($h)($h)($h)$/) {
+	$cr->set_source_rgb (hex ($1), hex ($2), hex ($3));
+    }
+    elsif ($colour =~ /^#($hh)($hh)($hh)$/) {
 	$cr->set_source_rgb (hex ($1), hex ($2), hex ($3));
     }
     else {
