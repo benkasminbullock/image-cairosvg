@@ -1,5 +1,10 @@
 Revision log for Perl module "Image::CairoSVG"
 
+0.03 2015-11-06
+
+- Clean up tests and documentation
+- Image diff disabled due to changes in Cairo rendering
+
 0.02 2014-05-22
 
 - Arc rotation (x axis rotation) added

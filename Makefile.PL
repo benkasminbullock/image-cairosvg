@@ -3,13 +3,14 @@ use warnings;
 use ExtUtils::MakeMaker;
 
 my $pm = 'lib/Image/CairoSVG.pm';
+my $pod = 'lib/Image/CairoSVG.pod';
 my $github = 'github.com/benkasminbullock/image-cairosvg';
 my $repo = "https://$github";
 
 WriteMakefile (
     NAME => 'Image::CairoSVG',
     VERSION_FROM => $pm,
-    ABSTRACT_FROM => $pm,
+    ABSTRACT_FROM => $pod,
     AUTHOR => 'Ben Bullock <bkb@cpan.org>',
     LICENSE => 'perl',
     PREREQ_PM => {
@@ -17,6 +18,7 @@ WriteMakefile (
 	'Image::SVG::Path' => '0.18',
 	'XML::Parser' => '0',
 	'Cairo' => '0',
+	'Carp' => '0',
     },
     META_MERGE => {
 	'meta-spec' => {

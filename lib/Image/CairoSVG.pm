@@ -1,92 +1,3 @@
-=encoding UTF-8
-
-=head1 NAME
-
-Image::CairoSVG - render SVG into a Cairo surface
-
-=head1 SYNOPSIS
-
-This example converts an SVG into a PNG:
-
-    use Cairo;
-    use Image::CairoSVG;
-    my $surface = Cairo::ImageSurface->new ();
-    my $cairosvg = Image::CairoSVG->new (
-        surface => $surface,
-    );
-    $cairosvg->render ('file.svg');
-
-=head1 DESCRIPTION
-
-This module renders SVG instructions into a Cairo surface.
-
-=head1 METHODS
-
-=head2 new
-
-    my $cairosvg = Image::CairoSVG->new ();
-
-Use default surface.
-
-    my $cairosvg = Image::CairoSVG->new (surface => $surface);
-
-With a surface
-
-Not implemented yet:
-
-    my $cairosvg = Image::CairoSVG->new (context => $cr);
-
-=head2 render
-
-    $cairosvg->render ('some.svg');
-
-Draw an SVG file into a Cairo surface.
-
-=head2 line
-
-    $cairosvg->line (%attr);
-
-Given SVG input of the form C<< <line > >>, this renders it onto the
-Cairo surface.
-
-=head2 path
-
-    $cairosvg->path (%attr);
-
-=head2 rect
-
-    $cairosvg->rect (%attr);
-
-=head1 Dependencies
-
-=over
-
-=item L<Cairo>
-
-This is the renderer.
-
-=item L<Image::SVG::Path>
-
-This is used for parsing the "path" information of the SVG.
-
-=item L<XML::Parser>
-
-This is used for parsing the SVG itself.
-
-=back
-
-=head1 SEE ALSO
-
-=head2 CPAN
-
-=head2 Other
-
-=head3 CairoSVG
-
-L<http://cairosvg.org/|CairoSVG> is a Python SVG renderer in Cairo.
-
-=cut
-
 package Image::CairoSVG;
 require Exporter;
 @ISA = qw(Exporter);
@@ -101,21 +12,10 @@ use XML::Parser;
 use Cairo;
 use Image::SVG::Path qw/extract_path_info create_path_string/;
 use constant M_PI => 3.14159265358979;
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 our $default_surface_type = 'argb32';
 our $default_surface_size = 100;
-
-=head2 new
-
-    my $cairosvg = Image::CairoSVG->new (
-        surface => Cairo::ImageSurface->create ('argb32', 100, 100)
-    );
-
-If a surface is not provided, this creates a L<Cairo::ImageSurface> of
-dimensions 100 by 100 of rgba format.
-
-=cut
 
 sub new
 {
@@ -145,14 +45,6 @@ sub new
     }
     return bless $self;
 }
-
-=head2 render
-
-    $self->render ($file);
-
-Render F<$file> onto the Cairo surface of C<$self>.
-
-=cut
 
 sub render
 {
@@ -231,12 +123,6 @@ sub handle_start
 
 }
 
-=head2 rect
-
-    $cairosvg->rect (%attr);
-
-=cut
-
 sub rect
 {
     my ($self, %attr) = @_;
@@ -252,12 +138,6 @@ sub rect
 
     $self->do_svg_attr (%attr);
 }
-
-=head2 ellipse
-
-    $cairosvg->ellipse (%attr);
-
-=cut
 
 sub ellipse
 {
@@ -498,11 +378,10 @@ sub quadbez
     my ($cr, $p2, $p3) = @_;
 
     if (! $cr->has_current_point ()) {
-	# This is a bug, there is always a current point when
-	# rendering an SVG path.
+	# This indicates a bug has happened, because there is always a
+	# current point when rendering an SVG path.
 	die "Invalid drawing of quadratic bezier without a current point";
     }
-
 
     my @p1 = $cr->get_current_point ();
     my @p2_1;

@@ -8,3 +8,6 @@ MYMETA..*
 .*\.bak
 ^Image-CairoSVG-[0-9\.]+/$
 ^Image-CairoSVG-[0-9\.]+\.tar\.gz$
+# Generated files
+^t/.*-out\.png$
+^lib/Image/CairoSVG\.pod\.tmpl$
