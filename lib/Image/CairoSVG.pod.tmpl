@@ -1,0 +1,133 @@
+[% start_year="2014" %]
+
+=encoding UTF-8
+
+=head1 NAME
+
+Image::CairoSVG - render SVG into a Cairo surface
+
+=head1 SYNOPSIS
+
+This example converts an SVG into a PNG:
+
+    use Cairo;
+    use Image::CairoSVG;
+    my $surface = Cairo::ImageSurface->new ();
+    my $cairosvg = Image::CairoSVG->new (
+        surface => $surface,
+    );
+    $cairosvg->render ('file.svg');
+    $surface->write_to_png ($tempout);
+
+=head1 DESCRIPTION
+
+This module renders some kinds of SVG ("Scalable Vector Graphics")
+instructions into a Cairo surface.
+
+=head1 METHODS
+
+=head2 new
+
+    my $cairosvg = Image::CairoSVG->new ();
+
+If a surface is not provided, this creates a L<Cairo::ImageSurface> of
+dimensions 100 by 100 of rgba format.
+
+The user can supply a surface:
+
+    my $cairosvg = Image::CairoSVG->new (surface => $surface);
+
+For example,
+
+    my $cairosvg = Image::CairoSVG->new (
+        surface => Cairo::ImageSurface->create ('argb32', 100, 100)
+    );
+
+=head2 render
+
+    $cairosvg->render ('some.svg');
+
+Draw an SVG file into a Cairo surface.
+
+=head1 DRAWING METHODS
+
+=head2 line
+
+    $cairosvg->line (%attr);
+
+Render an SVG line onto the surface specified by C<$cairosvg>.  Given
+SVG input of the form C<< <line > >>, this renders it onto the Cairo
+surface.
+
+=head2 path
+
+    $cairosvg->path (%attr);
+
+Given an SVG path element, send its attribute key / value pairs as
+C<%attr> to render into the Cairo surface of C<$cairosvg>.
+
+=head2 rect
+
+    $cairosvg->rect (%attr);
+
+=head2 ellipse
+
+    $cairosvg->ellipse (%attr);
+
+=head2 circle
+
+    $cairosvg->circle (%attr);
+
+=head2 polygon
+
+    $cairosvg->polygon (%attr);
+
+=head1 DEPENDENCIES
+
+=over
+
+=item L<Cairo>
+
+This is the renderer.
+
+=item L<Image::SVG::Path>
+
+This is used for parsing the "path" information of the SVG.
+
+=item L<XML::Parser>
+
+This is used for parsing the SVG itself.
+
+=back
+
+=head1 SEE ALSO
+
+=over
+
+=item CairoSVG
+
+L<http://cairosvg.org/|CairoSVG> is a Python SVG renderer in
+Cairo. Parts of the code here are based on it.
+
+=back
+
+=head1 BUGS
+
+This module is a "least effort" attempt to get the parts of SVG which
+the author needs rendered, rendered. It doesn't even pretend to be a
+full SVG renderer. So, if you find the module doesn't do some part of
+SVG which you want done, please add that to the module, and contribute
+your addition to this module via the github repository.
+
+[% INCLUDE "author" %]
+
+=head2 cairosvg licence
+
+Some parts of the module (specifically the SVG arc drawing code) are
+translations from the above-mentioned Python program "cairosvg", which
+is under the "GNU LESSER GENERAL PUBLIC LICENSE Version 3, 29 June
+2007". I'm not really sure how or if this affects the code, but just
+in case it causes legal issues for someone downstream, I'm mentioning
+it here.
+
+[% INCLUDE "terminology" %]

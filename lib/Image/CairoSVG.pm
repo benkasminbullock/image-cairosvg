@@ -18,6 +18,8 @@ This example converts an SVG into a PNG:
 
 =head1 DESCRIPTION
 
+This module renders SVG instructions into a Cairo surface.
+
 =head1 METHODS
 
 =head2 new
@@ -283,12 +285,6 @@ sub ellipse
     $self->do_svg_attr (%attr);
 }
 
-=head2 circle
-
-    $cairosvg->circle (%attr);
-
-=cut
-
 sub circle
 {
     my ($self, %attr) = @_;
@@ -305,12 +301,6 @@ sub circle
 
     $self->do_svg_attr (%attr);
 }
-
-=head2 polygon
-
-    $cairosvg->polygon (%attr);
-
-=cut
 
 sub polygon
 {
@@ -335,15 +325,6 @@ sub polygon
     $cr->close_path ();
     $self->do_svg_attr (%attr);
 }
-
-=head2 path
-
-    $cairosvg->path (%attr);
-
-Given an SVG path element, send its attribute key / value pairs as
-C<%attr> to render into the Cairo surface of C<$cairosvg>.
-
-=cut
 
 sub path
 {
@@ -537,14 +518,6 @@ sub quadbez
     $cr->curve_to (@p2_1, @p2_2, @$p3);
 }
 
-=head2 line
-
-    $cairosvg->line (%attr);
-
-Render an SVG line onto the surface specified by C<$cairosvg>.
-
-=cut
-
 sub line
 {
     my ($self, %attr) = @_;
@@ -691,23 +664,3 @@ sub rotate
 
 1;
 
-=head1 BUGS
-
-This module is a "least effort" attempt to get the parts of SVG which
-the author needs rendered rendered. It doesn't even pretend to be a
-full SVG renderer. So if you find the module doesn't do some part of
-SVG which you want done, please add that to the module and if possible
-contribute your addition to this module via git.
-
-=head1 LICENCE, COPYRIGHT, AUTHOR
-
-Copyright 2014 Ben Bullock bkb@cpan.org. Licence = Perl (Artistic + GNU).
-
-Some parts of the module (specifically the SVG arc drawing code) are
-translations from the above-mentioned Python program "cairosvg", which
-is under the "GNU LESSER GENERAL PUBLIC LICENSE Version 3, 29 June
-2007". I'm not really sure how or if this affects the code, but just
-in case it causes legal issues for someone downstream, I'm mentioning
-it here.
-
-=cut
