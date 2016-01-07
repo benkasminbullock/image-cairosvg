@@ -14,4 +14,7 @@ blib/*
 MYMETA.*
 META.*
 ppport.h
+# Automatically generated files.
 README
+MANIFEST
+lib/Image/CairoSVG.pod

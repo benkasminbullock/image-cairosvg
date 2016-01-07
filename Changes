@@ -1,5 +1,10 @@
 Revision log for Perl module "Image::CairoSVG"
 
+0.04 2016-01-07
+
+- Additional entries in SEE ALSO
+- Tidy
+
 0.03 2015-11-06
 
 - Clean up tests and documentation
