@@ -386,7 +386,6 @@ sub quadbez
     my @p1 = $cr->get_current_point ();
     my @p2_1;
     my @p2_2;
-    my @p3;
 
     # https://en.wikipedia.org/wiki/B%C3%A9zier_curve#Degree_elevation
 

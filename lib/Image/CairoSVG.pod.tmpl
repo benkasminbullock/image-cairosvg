@@ -32,6 +32,8 @@ This renders the following image:
 
 =end html
 
+(This example is included as L<F<synopsis.pl>|https://api.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/synopsis.pl> in the distribution. The L<input|https://api.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/locust.svg> and L<output files|https://api.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/locust.png> are also included.)
+
 =head1 VERSION
 
 This documents version [% version %] of Image::CairoSVG corresponding to git
@@ -51,7 +53,7 @@ instructions into a Cairo surface.
 If a surface is not provided, this creates a L<Cairo::ImageSurface> of
 dimensions 100 by 100 of rgba format.
 
-The user can supply a surface:
+The user can supply a Cairo surface:
 
     my $cairosvg = Image::CairoSVG->new (surface => $surface);
 
@@ -60,6 +62,13 @@ For example,
     my $cairosvg = Image::CairoSVG->new (
         surface => Cairo::ImageSurface->create ('argb32', 100, 100)
     );
+
+The user can also supply a Cairo context:
+
+    my $cairosvg = Image::CairoSVG->new (context => $cr);
+
+If a Cairo context is supplied, the value of C<surface> is ignored,
+and the image is written using the C<context> value.
 
 =head2 render
 

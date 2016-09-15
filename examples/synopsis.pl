@@ -4,7 +4,7 @@ use strict;
 use FindBin '$Bin';
 use Cairo;
 use Image::CairoSVG;
-my $surface = Cairo::ImageSurface->create ('argb32', 450, 200);
+my $surface = Cairo::ImageSurface->create ('argb32', 475, 200);
 my $cairosvg = Image::CairoSVG->new (
     surface => $surface,
 );
