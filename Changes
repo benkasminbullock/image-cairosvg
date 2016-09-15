@@ -1,5 +1,10 @@
 Revision log for Perl module "Image::CairoSVG"
 
+0.04_01 2016-09-15
+
+- Fix documentation errors
+- Add a better example including an image for HTML rendering.
+
 0.04 2016-01-07
 
 - Additional entries in SEE ALSO

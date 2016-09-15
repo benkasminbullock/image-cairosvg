@@ -1,4 +1,15 @@
 [% start_year="2014" %]
+[% MACRO example(file) BLOCK %]
+[%- pl =  file _ ".pl" -%]
+[%- out = file _ "-out.txt" -%]
+[% INCLUDE $pl | xtidy %]
+
+produces output
+
+[% INCLUDE $out | xtidy %]
+
+(This example is included as L<F<[% pl %]>|https://api.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/[% pl %]> in the distribution.)
+[% END %]
 
 =encoding UTF-8
 
@@ -10,14 +21,16 @@ Image::CairoSVG - render SVG into a Cairo surface
 
 This example converts an SVG into a PNG:
 
-    use Cairo;
-    use Image::CairoSVG;
-    my $surface = Cairo::ImageSurface->new ();
-    my $cairosvg = Image::CairoSVG->new (
-        surface => $surface,
-    );
-    $cairosvg->render ('file.svg');
-    $surface->write_to_png ($tempout);
+[% INCLUDE "synopsis.pl" | xtidy %]
+
+=begin html 
+
+<p>
+This renders the following image:
+</p>
+<img width=475 height=200 src='https://api.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/locust.png'>
+
+=end html
 
 =head1 DESCRIPTION
 
@@ -178,4 +191,3 @@ is under the "GNU LESSER GENERAL PUBLIC LICENSE Version 3, 29 June
 in case it causes legal issues for someone downstream, I'm mentioning
 it here.
 
-[% INCLUDE "terminology" %]

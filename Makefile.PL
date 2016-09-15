@@ -15,7 +15,7 @@ WriteMakefile (
     LICENSE => 'perl',
     PREREQ_PM => {
 	# Found lots of bugs in this so version needs to be this high.
-	'Image::SVG::Path' => '0.18',
+	'Image::SVG::Path' => '0.24',
 	'XML::Parser' => '0',
 	'Cairo' => '0',
 	'Carp' => '0',
@@ -34,7 +34,26 @@ WriteMakefile (
 		web => "$repo/issues",
 	    },
 #	    homepage => 'http://',
+	    prereqs => {
+		test => {
+		    recommends => {
+			# The user can test the output image "looks
+			# like" the target image with
+			# F<t/image-similar.t> if the following two
+			# modules are installed. Unfortunately,
+			# changes in Cairo mean that exact comparisons
+			# of pixels won't work, as discovered by
+			# version 0.02:
+			# http://matrix.cpantesters.org/?dist=Image-CairoSVG+0.02
+			# If the two modules aren't installed,
+			# F<t/image-similar.t> is completely skipped.
+			'Image::PNG::Libpng' => '0.42',
+			'Image::Similar' => '0.02',
+		    },
+		},
+	    },
         },
+
     },
     MIN_PERL_VERSION => '5.006001',
 );

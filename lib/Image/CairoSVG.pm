@@ -12,7 +12,7 @@ use XML::Parser;
 use Cairo;
 use Image::SVG::Path qw/extract_path_info create_path_string/;
 use constant M_PI => 3.14159265358979;
-our $VERSION = '0.04';
+our $VERSION = '0.04_01';
 
 our $default_surface_type = 'argb32';
 our $default_surface_size = 100;
@@ -264,9 +264,9 @@ sub path
 	    $cr->line_to ($x, $y);
 	}
 	elsif ($key eq 'C') {
-	    $cr->curve (@{$element->{control1}},
-			@{$element->{control2}},
-			@{$element->{end}});
+	    $cr->curve_to (@{$element->{control1}},
+			   @{$element->{control2}},
+			   @{$element->{end}});
 	}
 	elsif ($key eq 'Z') {
 	    $cr->close_path ();
