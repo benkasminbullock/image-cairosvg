@@ -12,7 +12,7 @@ use XML::Parser;
 use Cairo;
 use Image::SVG::Path qw/extract_path_info create_path_string/;
 use constant M_PI => 3.14159265358979;
-our $VERSION = '0.04_01';
+our $VERSION = '0.04_02';
 
 our $default_surface_type = 'argb32';
 our $default_surface_size = 100;
