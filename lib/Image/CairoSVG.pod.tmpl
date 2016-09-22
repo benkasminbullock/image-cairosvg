@@ -28,7 +28,7 @@ This example converts an SVG into a PNG:
 <p>
 This renders the following image:
 </p>
-<img width=475 height=200 src='https://api.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/locust.png'>
+<img width="451.271" height="187.542" src='https://api.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/locust.png'>
 
 =end html
 
@@ -50,9 +50,6 @@ instructions into a Cairo surface.
 
     my $cairosvg = Image::CairoSVG->new ();
 
-If a surface is not provided, this creates a L<Cairo::ImageSurface> of
-dimensions 100 by 100 of rgba format.
-
 The user can supply a Cairo surface:
 
     my $cairosvg = Image::CairoSVG->new (surface => $surface);
@@ -72,9 +69,16 @@ and the image is written using the C<context> value.
 
 =head2 render
 
-    $cairosvg->render ('some.svg');
+    my $surface = $cairosvg->render ('some.svg');
 
-Draw an SVG file into a Cairo surface.
+Draw an SVG file into a Cairo surface. The return value is the surface
+drawn into. If the user does not supply a context or surface in
+L</new>, a new Cairo::ImageSurface object is generated from the
+attributes of the <svg> element, either the C<width> and C<height>
+attributes, or the width and height specified in the C<viewBox>
+attribute. If the user supplied a context with L</new>, the return
+value should be ignored. If the user supplied a surface with L</new>,
+the return value is just that surface.
 
 =head1 DRAWING METHODS
 

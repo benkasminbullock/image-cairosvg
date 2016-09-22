@@ -7,12 +7,12 @@ require Exporter;
 );
 use warnings;
 use strict;
-use Carp;
+use Carp qw/carp croak confess cluck/;
 use XML::Parser;
 use Cairo;
 use Image::SVG::Path qw/extract_path_info create_path_string/;
 use constant M_PI => 3.14159265358979;
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 our $default_surface_type = 'argb32';
 our $default_surface_size = 100;
@@ -21,29 +21,30 @@ sub new
 {
     my ($class, %options) = @_;
 
-    my $self = {};
+    my $self = bless {};
 
     my $context = $options{context};
+    my $surface = $options{surface};
 
     if ($context) {
 	$self->{cr} = $context;
     }
     else {
-	my $surface = $options{surface};
-	if (! $surface) {
-	    $surface = Cairo::ImageSurface->create (
-		$default_surface_type,
-		$default_surface_size,
-		$default_surface_size,
-	    );
-	}
-	$self->{surface} = $surface;
-	$self->{cr} = Cairo::Context->create ($self->{surface});
-	if (! $self->{cr}) {
-	    die "Cairo::Context->create failed";
+	if ($surface) {
+	    $self->{surface} = $surface;
+	    $self->make_cr ();
 	}
     }
-    return bless $self;
+    return $self;
+}
+
+sub make_cr
+{
+    my ($self) = @_;
+    if (! $self->{surface}) {
+	confess "BUG: No surface";
+    }
+    $self->{cr} = Cairo::Context->create ($self->{surface});
 }
 
 sub render
@@ -66,12 +67,8 @@ sub render
 	    },
 	},
     );
-    my $cr = $self->{cr};
-
-    if (! $cr) {
-	die "No context in $self";
-    }
     $p->parsefile ($file);
+    return $self->{surface};
 }
 
 sub handle_end
@@ -83,13 +80,56 @@ sub handle_end
     }
 }
 
+sub svg
+{
+    my ($self, %attr) = @_;
+    my $width;
+    my $height;
+    if ($attr{width}) {
+	$width = $attr{width};
+    }
+    if ($attr{height}) {
+	$height = $attr{height};
+    }
+    if (! defined $width && ! defined $height) {
+	my $viewBox = $attr{viewBox};
+	if ($viewBox) {
+	    my (undef, undef, $width, $height) = split /\s+/, $viewBox;
+	}
+    }
+    my $surface;
+    if (! $width || ! $height) {
+	carp "Image width or height not found in $self->{file}";
+	$surface = Cairo::ImageSurface->create (
+	    $default_surface_type,
+	    $default_surface_size,
+	    $default_surface_size,
+	);
+    }
+    else {
+	$surface = Cairo::ImageSurface->create (
+	    $default_surface_type,
+	    $width,
+	    $height,
+	);
+    }
+    $self->{surface} = $surface;
+    $self->make_cr ();
+    if (! $self->{cr}) {
+	die "Cairo::Context->create failed";
+    }
+}
+
 # Start tag handler for the XML parser. This is private.
 
 sub handle_start
 {
     my ($self, $parser, $tag, %attr) = @_;
 
-    if ($tag eq 'path') {
+    if ($tag eq 'svg') {
+	$self->svg (%attr);
+    }
+    elsif ($tag eq 'path') {
 	$self->path (%attr);
     }
     elsif ($tag eq 'polygon') {
@@ -107,8 +147,7 @@ sub handle_start
     elsif ($tag eq 'rect') {
 	$self->rect (%attr);
     }
-    elsif ($tag eq 'svg' ||
-	   $tag eq 'title') {
+    elsif ($tag eq 'title') {
 	;
     }
     elsif ($tag eq 'g') {
@@ -120,7 +159,6 @@ sub handle_start
 
     # http://www.princexml.com/doc/7.1/svg/
     # g, rect, circle, ellipse, line, polyline, polygon, path, text, tspan
-
 }
 
 sub rect
@@ -470,7 +508,6 @@ sub do_svg_attr
 	$stroke_width = $self->convert_svg_units ($stroke_width);
 	$cr->set_line_width ($stroke_width);
     }
-
     if ($fill && $fill ne 'none') {
 	if ($stroke && $stroke ne 'none') {
 	    $self->set_colour ($fill);
@@ -488,7 +525,8 @@ sub do_svg_attr
 	$cr->stroke ();
     }
     elsif (! $fill && ! $stroke) {
-	# Fill seems to be the default.
+	# Fill with black seems to be the default.
+	$self->set_colour ('#000000');
 	$cr->fill ();
     }
 }
