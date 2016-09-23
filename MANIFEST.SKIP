@@ -13,3 +13,5 @@ MYMETA..*
 ^lib/Image/CairoSVG\.pod\.tmpl$
 # Author tests can be found in github.
 ^xt/.*$
+# Outputs from example programs
+^examples/.*-out\.txt$
