@@ -92,7 +92,7 @@ sub svg
 	$height = $attr{height};
     }
     if (! defined $width && ! defined $height) {
-	my $viewBox = $attr{viewBox};
+	my $viewBox = $attr{viewBox} || $attr{viewbox};
 	if ($viewBox) {
 	    (undef, undef, $width, $height) = split /\s+/, $viewBox;
 	}
