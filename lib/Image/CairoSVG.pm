@@ -12,7 +12,7 @@ use XML::Parser;
 use Cairo;
 use Image::SVG::Path qw/extract_path_info create_path_string/;
 use constant M_PI => 3.14159265358979;
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 our $default_surface_type = 'argb32';
 our $default_surface_size = 100;
@@ -94,7 +94,7 @@ sub svg
     if (! defined $width && ! defined $height) {
 	my $viewBox = $attr{viewBox};
 	if ($viewBox) {
-	    my (undef, undef, $width, $height) = split /\s+/, $viewBox;
+	    (undef, undef, $width, $height) = split /\s+/, $viewBox;
 	}
     }
     my $surface;

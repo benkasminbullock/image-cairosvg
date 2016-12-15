@@ -20,6 +20,9 @@ WriteMakefile (
 	'Cairo' => '0',
 	'Carp' => '0',
     },
+    EXE_FILES => [
+	"script/svg2png",
+    ],
     META_MERGE => {
 	'meta-spec' => {
 	    version => 2,
