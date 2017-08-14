@@ -8,7 +8,7 @@ produces output
 
 [% INCLUDE $out | xtidy %]
 
-(This example is included as L<F<[% pl %]>|https://api.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/[% pl %]> in the distribution.)
+(This example is included as L<F<[% pl %]>|https://fastapi.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/[% pl %]> in the distribution.)
 [% END %]
 
 =encoding UTF-8
@@ -28,11 +28,11 @@ This example converts an SVG into a PNG:
 <p>
 This renders the following image:
 </p>
-<img width="451.271" height="187.542" src='https://api.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/locust.png'>
+<img width="451.271" height="187.542" src='https://fastapi.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/locust.png'>
 
 =end html
 
-(This example is included as L<F<synopsis.pl>|https://api.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/synopsis.pl> in the distribution. The L<input|https://api.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/locust.svg> and L<output files|https://api.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/locust.png> are also included.)
+(This example is included as L<F<synopsis.pl>|https://fastapi.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/synopsis.pl> in the distribution. The L<input|https://fastapi.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/locust.svg> and L<output files|https://fastapi.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/locust.png> are also included.)
 
 =head1 VERSION
 
@@ -79,6 +79,11 @@ attributes, or the width and height specified in the C<viewBox>
 attribute. If the user supplied a context with L</new>, the return
 value should be ignored. If the user supplied a surface with L</new>,
 the return value is just that surface.
+
+If the call value is a scalar containing what looks like XML, it is
+parsed from the scalar instead.
+
+Calling with a scalar containing XML was added in version 0.08.
 
 =head1 DRAWING METHODS
 
