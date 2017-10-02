@@ -72,10 +72,10 @@ sub render
     elsif (! -f $file) {
 	croak "No such file '$file'";
     }
-else {
-    $self->{file} = $file;
-    $p->parsefile ($file);
-}
+    else {
+	$self->{file} = $file;
+	$p->parsefile ($file);
+    }
     return $self->{surface};
 }
 
