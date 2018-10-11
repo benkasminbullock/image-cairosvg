@@ -2,7 +2,7 @@ package Image::CairoSVG;
 use warnings;
 use strict;
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 use Carp qw/carp croak confess cluck/;
 use XML::Parser;
@@ -22,12 +22,19 @@ sub new
 
     my $context = $options{context};
     my $surface = $options{surface};
+    my $verbose = $options{verbose};
 
     delete $options{context};
     delete $options{surface};
+    delete $options{verbose};
 
     for my $k (keys %options) {
 	carp "Unknown option $k";
+    }
+
+    if ($verbose) {
+	debugmsg ("Debugging messages switched on");
+	$self->{verbose} = 1;
     }
 
     if ($context) {
@@ -35,11 +42,15 @@ sub new
 	if ($surface) {
 	    carp "Value of surface ignored: specify either cr or surface";
 	}
+	if ($self->{verbose}) {
+	    debugmsg ("Using user-supplied context $self->{cr}");
+	}
     }
-    else {
-	if ($surface) {
-	    $self->{surface} = $surface;
-	    $self->make_cr ();
+    elsif ($surface) {
+	$self->{surface} = $surface;
+	$self->make_cr ();
+	if ($self->{verbose}) {
+	    debugmsg ("Using user-supplied surface $self->{surface}");
 	}
     }
     return $self;
@@ -52,6 +63,10 @@ sub make_cr
 	confess "BUG: No surface";
     }
     $self->{cr} = Cairo::Context->create ($self->{surface});
+    if (! $self->{cr}) {
+	# We won't be able to do very much without a context.
+	croak "Cairo::Context->create failed";
+    }
 }
 
 sub render
@@ -73,6 +88,9 @@ sub render
 	},
     );
     if ($file =~ /<.*>/) {
+	if ($self->{verbose}) {
+	    debugmsg ("Input looks like a scalar");
+	}
 	# parse from scalar
 	$p->parse ($file);
     }
@@ -81,6 +99,9 @@ sub render
     }
     else {
 	$self->{file} = $file;
+	if ($self->{verbose}) {
+	    debugmsg ("Input looks like a file");
+	}
 	$p->parsefile ($file);
     }
     return $self->{surface};
@@ -95,6 +116,8 @@ sub handle_end
     }
 }
 
+# <svg> tag seen
+
 sub svg
 {
     my ($self, %attr) = @_;
@@ -106,6 +129,9 @@ sub svg
     if ($attr{height}) {
 	$height = $attr{height};
     }
+
+    # Use viewBox attribute
+
     if (! defined $width && ! defined $height) {
 	my $viewBox = $attr{viewBox} || $attr{viewbox};
 	if ($viewBox) {
@@ -114,6 +140,9 @@ sub svg
     }
     my $surface = $self->{surface};
     if (! $self->{cr} && ! $surface) {
+	if ($self->{verbose}) {
+	    debugmsg ("User did not supply surface or context");
+	}
 	if (! $width || ! $height) {
 	    carp "Image width or height not found in $self->{file}";
 	    $surface = Cairo::ImageSurface->create (
@@ -130,13 +159,7 @@ sub svg
 	    );
 	}
 	$self->{surface} = $surface;
-    }
-
-    if (! $self->{cr}) {
 	$self->make_cr ();
-	if (! $self->{cr}) {
-	    die "Cairo::Context->create failed";
-	}
     }
 }
 
@@ -582,6 +605,13 @@ sub rotate
     my ($x, $y, $angle) = @_;
     return ($x * cos ($angle) - $y * sin ($angle),
 	    $y * cos ($angle) + $x * sin ($angle));
+}
+
+sub debugmsg
+{
+    my (undef, $file, $line) = caller (0);
+    printf ("%s:%d: ", $file, $line);
+    print "@_\n";
 }
 
 1;
