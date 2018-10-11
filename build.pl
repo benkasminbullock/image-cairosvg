@@ -6,5 +6,6 @@ use Perl::Build;
 perl_build (
 #    pod => ['lib/Image/CairoSVG.pod',],
     make_pod => "$Bin/make-pod.pl",
+    clean => "$Bin/clean.pl",
 );
 exit;

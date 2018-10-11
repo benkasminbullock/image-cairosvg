@@ -1,18 +1,15 @@
 package Image::CairoSVG;
-require Exporter;
-@ISA = qw(Exporter);
-@EXPORT_OK = qw//;
-%EXPORT_TAGS = (
-    all => \@EXPORT_OK,
-);
 use warnings;
 use strict;
+
+our $VERSION = '0.08';
+
 use Carp qw/carp croak confess cluck/;
 use XML::Parser;
 use Cairo;
 use Image::SVG::Path qw/extract_path_info create_path_string/;
+
 use constant M_PI => 3.14159265358979;
-our $VERSION = '0.08';
 
 our $default_surface_type = 'argb32';
 our $default_surface_size = 100;
@@ -26,8 +23,18 @@ sub new
     my $context = $options{context};
     my $surface = $options{surface};
 
+    delete $options{context};
+    delete $options{surface};
+
+    for my $k (keys %options) {
+	carp "Unknown option $k";
+    }
+
     if ($context) {
 	$self->{cr} = $context;
+	if ($surface) {
+	    carp "Value of surface ignored: specify either cr or surface";
+	}
     }
     else {
 	if ($surface) {
@@ -105,26 +112,31 @@ sub svg
 	    (undef, undef, $width, $height) = split /\s+/, $viewBox;
 	}
     }
-    my $surface;
-    if (! $width || ! $height) {
-	carp "Image width or height not found in $self->{file}";
-	$surface = Cairo::ImageSurface->create (
-	    $default_surface_type,
-	    $default_surface_size,
-	    $default_surface_size,
-	);
+    my $surface = $self->{surface};
+    if (! $self->{cr} && ! $surface) {
+	if (! $width || ! $height) {
+	    carp "Image width or height not found in $self->{file}";
+	    $surface = Cairo::ImageSurface->create (
+		$default_surface_type,
+		$default_surface_size,
+		$default_surface_size,
+	    );
+	}
+	else {
+	    $surface = Cairo::ImageSurface->create (
+		$default_surface_type,
+		$width,
+		$height,
+	    );
+	}
+	$self->{surface} = $surface;
     }
-    else {
-	$surface = Cairo::ImageSurface->create (
-	    $default_surface_type,
-	    $width,
-	    $height,
-	);
-    }
-    $self->{surface} = $surface;
-    $self->make_cr ();
+
     if (! $self->{cr}) {
-	die "Cairo::Context->create failed";
+	$self->make_cr ();
+	if (! $self->{cr}) {
+	    die "Cairo::Context->create failed";
+	}
     }
 }
 
@@ -264,50 +276,39 @@ sub path
 	absolute => 1,
 	no_shortcuts => 1,
     });
-#    print create_path_string (\@path_info), "\n";
-
 
     # Cairo context.
 
     my $cr = $self->{cr};
 
     if (! $cr) {
-	die "No context in $self";
+	croak "No context in $self";
     }
 
     for my $element (@path_info) {
-
-	# for my $k (sort keys %$element) {
-	#     print "$k -> $element->{$k}\n";
-	# }
-	# print "\n";
-
-	# http://www.lemoda.net/cairo/cairo-tutorial/camel.html
 
 	my $key = $element->{svg_key};
 
 	if ($key eq lc $key) {
 	    # This is a bug, "extract_path_info" above should never
-	    # return a lower-case key.
+	    # return a lower-case key, which means a relative path.
 	    die "Path parse conversion to absolute failed";
 	}
+
 	if ($key eq 'S') {
 	    # This is a bug, "extract_path_info" above should never
-	    # return a shortcut key.
+	    # return a shortcut key, they should have been converted
+	    # to C keys.
 	    die "Path parse conversion to no shortcuts failed";
 	}
 
 	if ($key eq 'M') {
+	    # Move to
 	    $cr->new_sub_path ();
 	    $cr->move_to (@{$element->{point}});
-#	    print "move to @{$element->{point}}\n";
 	}
 	elsif ($key eq 'L') {
-	    my $point = $element->{point};
-	    my ($x, $y) = @{$point};
-	    die unless defined $x && defined $y;
-#	    print "draw line to $x $y [@$point]\n";
-	    $cr->line_to ($x, $y);
+	    $cr->line_to (@{$element->{point}});
 	}
 	elsif ($key eq 'C') {
 	    $cr->curve_to (@{$element->{control1}},
@@ -318,35 +319,31 @@ sub path
 	    $cr->close_path ();
 	}
 	elsif ($key eq 'Q') {
-	    # Cairo doesn't support quadratic bezier curves so we have
-	    # to shim this
+	    # Cairo doesn't support quadratic bezier curves, so we use
+	    # quadbez to draw them.
 	    quadbez ($cr, $element->{control}, $element->{end});
 	}
 	elsif ($key eq 'V') {
-	    my ($xo, $yo) = $cr->get_current_point ();
-	    my $y = $element->{y};
-	    die unless defined $y;
-#	    print "draw to $xo $y\n";
-	    $cr->line_to ($xo, $y);
+	    # Vertical line, x remains constant, so use original x ($xo).
+	    my ($xo, undef) = $cr->get_current_point ();
+	    $cr->line_to ($xo, $element->{y});
 	}
 	elsif ($key eq 'H') {
-	    my ($xo, $yo) = $cr->get_current_point ();
-	    my $x = $element->{x};
-	    die unless defined $x;
-#	    print "draw to $x $yo\n";
-	    $cr->line_to ($x, $yo);
+	    # Horizontal line, y remains constant, so use original y ($yo).
+	    my (undef, $yo) = $cr->get_current_point ();
+	    $cr->line_to ($element->{x}, $yo);
 	}
 	elsif ($key eq 'A') {
 	    $self->svg_arc ($element);
 	}
 	else {
-	    warn "Unknown SVG path key '$key'";
+	    carp "Unknown SVG path key '$key': ignoring";
 	}
     }
     $self->do_svg_attr (%attr);
 }
 
-# This is a perl of 
+# This is a Perl translation of 
 # https://github.com/Kozea/CairoSVG/blob/74701790b5fd299e99f993b18ea676f3284907b4/cairosvg/surface/path.py
 
 sub svg_arc
@@ -356,11 +353,7 @@ sub svg_arc
     my $ry = $element->{ry};
     my $x3 = $element->{x};
     my $y3 = $element->{y};
-    my $x_axis_rotation = (M_PI * $element->{x_axis_rotation})/180;
-    my $large_arc_flag = $element->{large_arc_flag};
-    my $sweep_flag = $element->{sweep_flag};
 
-#    warn "A is unsupported";
     my $cr = $self->{cr};
 
     # rx=0 or ry=0 means straight line
@@ -371,6 +364,12 @@ sub svg_arc
     }
 
     my ($x1, $y1) = $cr->get_current_point ();
+
+    # Calculations
+
+    my $x_axis_rotation = (M_PI * $element->{x_axis_rotation})/180;
+    my $large_arc_flag = $element->{large_arc_flag};
+    my $sweep_flag = $element->{sweep_flag};
 
     # Translate $x3, $y3 to relative coords
 
@@ -401,8 +400,10 @@ sub svg_arc
 
     my $angle1 = point_angle ($xc, $yc, 0, 0);
     my $angle2 = point_angle ($xc, $yc, $xe, $ye);
-    $cr->save ();
 
+    # Draw the arc
+
+    $cr->save ();
     $cr->translate ($x1, $y1);
     $cr->rotate ($x_axis_rotation);
     if ($sweep_flag) {
@@ -412,7 +413,6 @@ sub svg_arc
 	$cr->arc_negative ($xc, $yc, $rx, $angle1, $angle2);
     }
     $cr->restore ();
-
 }
 
 # Quadratic bezier curve shim for Cairo
@@ -461,11 +461,9 @@ sub convert_svg_units
 {
     my ($self, $thing) = @_;
     if (! defined $thing) {
-#	print "Undefiend\n";
 	return 0;
     }
     if ($thing eq '') {
-#	print "nothing";
 	return 0;
     }
     if ($thing =~ /^(\d|\.)+$/) {
@@ -475,7 +473,7 @@ sub convert_svg_units
 	$thing =~ s/px$//;
 	return $thing;
     }
-    die "Dunno what to do with '$thing'";
+    carp "Could not convert SVG units '$thing'";
 }
 
 # We have a path in the cairo surface and now we have to do the SVG
@@ -492,11 +490,11 @@ sub do_svg_attr
 	    if (! $attr{$k}) {
 		$attr{$k} = $self->{attr}{$k};
 	    }
+	    else {
+		carp "Not overwriting attribute $k";
+	    }
 	}
     }
-
-
-#    confess "Nothing to do" unless keys %attr > 0;
 
     # Barking insanity
     
