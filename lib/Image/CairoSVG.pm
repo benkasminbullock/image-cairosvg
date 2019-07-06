@@ -562,9 +562,13 @@ sub do_svg_attr
 	}
     }
     my $fill = $attr{fill};
-    $fill =~ s/^\s+|\s+$//g;
+    if ($fill) {
+	$fill =~ s/^\s+|\s+$//g;
+    }
     my $stroke = $attr{stroke};
-    $stroke =~ s/^\s+|\s+$//g;
+    if ($stroke) {
+	$stroke =~ s/^\s+|\s+$//g;
+    }
     my $cr = $self->{cr};
     my $stroke_width = $attr{"stroke-width"};
     if ($stroke_width) {
