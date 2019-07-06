@@ -2,7 +2,7 @@ package Image::CairoSVG;
 use warnings;
 use strict;
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 use Carp qw/carp croak confess cluck/;
 use XML::Parser;
