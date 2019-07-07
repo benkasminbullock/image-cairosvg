@@ -305,7 +305,6 @@ sub polygon
 sub polyline
 {
     my ($self, %attr) = @_;
-    my $points = $attr{points};
     my @points = split_points ($attr{points});
 
     my $cr = $self->{cr};
