@@ -136,6 +136,14 @@ converts quadratic bezier curves into cubic bezier curves.
 
     $cairosvg->polygon (%attr);
 
+Draws a polygon based on the C<points> attribute, closing the path.
+
+=head2 polyline
+
+    $cairosvg->polyline (%attr);
+
+The same as L</polygon> except that it doesn't close the path.
+
 =head1 DEPENDENCIES
 
 =over

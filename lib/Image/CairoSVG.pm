@@ -2,9 +2,9 @@ package Image::CairoSVG;
 use warnings;
 use strict;
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
-use Carp qw/carp croak confess cluck/;
+use Carp qw/carp croak/;
 use XML::Parser;
 use Cairo;
 use Image::SVG::Path qw/extract_path_info create_path_string/;
@@ -60,7 +60,7 @@ sub make_cr
 {
     my ($self) = @_;
     if (! $self->{surface}) {
-	confess "BUG: No surface";
+	die "BUG: No surface";
     }
     $self->{cr} = Cairo::Context->create ($self->{surface});
     if (! $self->{cr}) {
@@ -276,8 +276,8 @@ sub polygon
 {
     my ($self, %attr) = @_;
     my $points = $attr{points};
-    my @points = split /,|\s+/, $points;
-    die if @points % 2 != 0;
+    my @points = split /,\s+|\s+/, $points;
+    die "Bad points $points" if @points % 2 != 0;
 
     my $cr = $self->{cr};
 
@@ -309,14 +309,12 @@ sub polyline
 
     my $y = pop @points;
     my $x = pop @points;
-    print "Moving to $x $y\n";
     $cr->move_to ($x, $y);
 
     while (@points) {
 	$y = pop @points;
 	$x = pop @points;
 	$cr->line_to ($x, $y);
-	print "Line to $x $y\n";
     }
     $self->do_svg_attr (%attr);
 }
