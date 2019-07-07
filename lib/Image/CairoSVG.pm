@@ -272,12 +272,18 @@ sub circle
     $self->do_svg_attr (%attr);
 }
 
+sub split_points
+{
+    my ($points) = @_;
+    my @points = split /,\s*|\s+/, $points;
+    die "Bad points $points" if @points % 2 != 0;
+    return @points;
+}
+
 sub polygon
 {
     my ($self, %attr) = @_;
-    my $points = $attr{points};
-    my @points = split /,\s+|\s+/, $points;
-    die "Bad points $points" if @points % 2 != 0;
+    my @points = split_points ($attr{points});
 
     my $cr = $self->{cr};
 
@@ -300,8 +306,7 @@ sub polyline
 {
     my ($self, %attr) = @_;
     my $points = $attr{points};
-    my @points = split /,\s+|\s+/, $points;
-    die "Bad points $points" if @points % 2 != 0;
+    my @points = split_points ($attr{points});
 
     my $cr = $self->{cr};
 
