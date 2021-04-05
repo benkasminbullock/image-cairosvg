@@ -18,6 +18,7 @@ use Image::SVG::Path qw/extract_path_info create_path_string/;
 
 our $default_surface_type = 'argb32';
 our $default_surface_size = 100;
+our @defaultrgb = (0, 0, 0);
 
 sub new
 {
@@ -620,7 +621,6 @@ sub do_svg_attr
 my $gcwtable;
 # Only warn once if the module fails.
 my $gcwtablefailed;
-my @defaultrgb = (0, 0, 0);
 
 sub name2colour
 {
