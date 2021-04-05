@@ -17,7 +17,7 @@ WriteMakefile (
 	'Cairo' => '0',
 	'Carp' => '0',
 	'ExtUtils::ParseXS::Utilities' => '0',
-	'Graphics::ColorNames:WWW' => '1.14',
+	'Graphics::ColorNames::WWW' => '1.14',
 	# Found lots of bugs in this so version needs to be this high.
 	'Image::SVG::Path' => '0.24',
 	'Math::Trig' => '0',
