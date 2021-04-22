@@ -205,7 +205,7 @@ sub handle_start
 	;
     }
     elsif ($tag eq 'g') {
-	$self->{attr} = \%attr;
+	$self->g (%attr);
     }
     elsif ($tag eq 'polyline') {
 	$self->polyline (%attr);
@@ -219,6 +219,11 @@ sub handle_start
 
     # http://www.princexml.com/doc/7.1/svg/
     # g, rect, circle, ellipse, line, path, text, tspan
+}
+
+sub g
+{
+    my ($self, %attr) = @_;
 }
 
 sub rect
