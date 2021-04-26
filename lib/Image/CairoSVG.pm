@@ -2,16 +2,16 @@ package Image::CairoSVG;
 use warnings;
 use strict;
 
-our $VERSION = '0.12';
+our $VERSION = '0.13';
 
 # Core modules
 use Carp qw/carp croak/;
 use ExtUtils::ParseXS::Utilities 'trim_whitespace';
 use Math::Trig;
 use Scalar::Util 'looks_like_number';
-use XML::Parser;
 
 # Installed modules
+use XML::Parser;
 use Cairo;
 use Graphics::ColorNames::WWW;
 use Image::SVG::Path qw/extract_path_info create_path_string/;
@@ -600,6 +600,15 @@ sub do_svg_attr
 	$stroke_width = svg_units ($stroke_width);
 	$cr->set_line_width ($stroke_width);
     }
+    my $linecap = $attr{"stroke-linecap"};
+    if ($linecap) {
+	$cr->set_line_cap ($linecap);
+    }
+    my $linejoin = $attr{"stroke-linejoin"};
+    if ($linejoin) {
+	$cr->set_line_join ($linejoin);
+    }
+
     if ($fill && $fill ne 'none') {
 	if ($stroke && $stroke ne 'none') {
 	    $self->set_colour ($fill);
