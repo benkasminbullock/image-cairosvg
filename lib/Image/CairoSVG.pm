@@ -1,13 +1,14 @@
 package Image::CairoSVG;
 use warnings;
 use strict;
+use utf8;
 
 our $VERSION = '0.13';
 
 # Core modules
 use Carp qw/carp croak/;
 use ExtUtils::ParseXS::Utilities 'trim_whitespace';
-use Math::Trig;
+use Math::Trig qw!acos pi rad2deg deg2rad!;
 use Scalar::Util 'looks_like_number';
 
 # Installed modules
@@ -80,11 +81,6 @@ sub render
     my ($self, $file) = @_;
     my $p = XML::Parser->new (
 	Handlers => {
-
-	    # I think (may be wrong) we only need to handle "start"
-	    # tags for SVG. As far as I know, everything in SVG is a
-	    # "start" tag plus attributes.
-
 	    Start => sub {
 		handle_start ($self, @_);
 	    },
@@ -116,6 +112,10 @@ sub render
 sub handle_end
 {
     my ($self, $parser, $tag) = @_;
+    my $element = pop @{$self->{elements}};
+    print "</$element->{tag}>\n";
+    my $attr = $element->{attr};
+    $self->do_fill_stroke ($attr);
     # At the end of a group, delete its attributes.
     if ($tag eq 'g') {
 	delete $self->{attr};
@@ -136,6 +136,12 @@ sub svg
     if ($attr{height}) {
 	$height = $attr{height};
 	$height = svg_units ($height);
+    }
+    if ($attr{fill}) {
+	$self->{fill} = $attr{fill};
+    }
+    if ($attr{stroke}) {
+	$self->{stroke} = $attr{stroke};
     }
 
     # Use viewBox attribute
@@ -179,6 +185,13 @@ sub svg
 sub handle_start
 {
     my ($self, $parser, $tag, %attr) = @_;
+
+    my $element = {
+	tag => $tag,
+	attr => \%attr,
+    };
+    push @{$self->{elements}}, $element;
+    print "<$tag>\n";
 
     if ($tag eq 'svg') {
 	$self->svg (%attr);
@@ -415,32 +428,110 @@ sub path
 }
 
 # This is a Perl translation of 
-# https://github.com/Kozea/CairoSVG/blob/74701790b5fd299e99f993b18ea676f3284907b4/cairosvg/surface/path.py
+# https://www.w3.org/TR/SVG/implnote.html#ArcImplementationNotes
 
 sub svg_arc
 {
     my ($self, $element) = @_;
+    my $cr = $self->{cr};
+    # Radii
     my $rx = $element->{rx};
     my $ry = $element->{ry};
-    my $x3 = $element->{x};
-    my $y3 = $element->{y};
-
-    my $cr = $self->{cr};
+    # End points
+    my $x2 = $element->{x};
+    my $y2 = $element->{y};
 
     # rx=0 or ry=0 means straight line
-
     if ($rx == 0 || $ry == 0) {
-	$cr->line_to ($x3, $y3);
+	$self->msg ("Arc has a zero radius rx=$rx or ry=$ry, treating as straight line");
+	$cr->line_to ($x2, $y2);
 	return;
     }
-
+    my $fa = $element->{large_arc_flag};
+    my $fs = $element->{sweep_flag};
+    $self->msg ("Inputs: large-arc-flag: $fa, sweep-flag: $fs");
+    # Start points
     my ($x1, $y1) = $cr->get_current_point ();
+    $self->msg ("Inputs: arc start: ($x1, $y1)");
+    $self->msg ("Inputs: arc end: ($x2, $y2)");
+    $self->msg ("Inputs: radii: ($rx, $ry)");
+    my $phi = deg2rad ($element->{x_axis_rotation});
+    $self->msg ("Inputs: φ = $phi radians");
+    my ($xd, $yd) = (($x1-$x2)/2, ($y1-$y2)/2);
+    $self->msg ("Midpoint of vector from end to start: ($xd, $yd)");
+    my $s = sin $phi;
+    my $c = cos $phi;
+    $self->msg ("sin φ = $s, cos φ = $c");
+    my ($x1d, $y1d) = ($xd * $c + $yd * $s, - $xd * $s + $yd * $c);
+    $self->msg ("Rotated midpoint: x1' = $x1d, y1' = $y1d");
+    my $den = ($rx * $y1d)**2 + ($ry * $x1d)**2;
+    my $num = ($rx * $ry)**2 - $den;
+    $self->msg ("den = $den, num = $num");
+    my $factor = sqrt ($num / $den);
+    $self->msg ("factor = $factor");
+    my $sign = 1;
+    if ($fa == $fs) {
+	$sign = -1;
+    }
+    $factor *= $sign;
+    my $cxd =   $factor * $rx * $y1d / $ry;
+    my $cyd = - $factor * $ry * $x1d / $rx;
+    $self->msg ("Transformed centre: ($cxd, $cyd)");
+    # Eq 5.3
+    my $cx = ($c * $cxd - $s * $cyd) + ($x1 + $x2) / 2;
+    my $cy = ($s * $cxd + $c * $cyd) + ($y1 + $y2) / 2;
+    $self->msg ("Centre of ellipse: ($cx, $cy)");
+
+    my @vec1 = (1,0);
+    # Eq. 5.5
+    my $xv2 = ($x1d - $cxd)/$rx;
+    my $yv2 = ($y1d - $cyd)/$ry;
+    my @vec2 = ($xv2, $yv2);
+    my $theta1 = vangle (\@vec1, \@vec2);
+    $self->msg ("Start angle θ1 = $theta1");
+    # Eq. 5.6
+    my $xv3 = (-$x1d - $cxd)/$rx;
+    my $yv3 = (-$y1d - $cyd)/$ry;
+    my @vec3 = ($xv3, $yv3);
+    my $dt = vangle (\@vec2, \@vec3);
+    my $dtd = rad2deg ($dt);
+    $self->msg ("Swept angle initially: Δθ = $dt ($dtd)");
+    if ($fs == 0) {
+
+	# if fS = 0 and the right side of (eq. 5.6) is greater than 0,
+	# then subtract 360°, whereas if fS = 1 and the right side of
+	# (eq. 5.6) is less than 0, then add 360°. In all other cases
+	# leave it as is.
+
+	if ($dt > 0) {
+	    $dt -= 2*pi;
+	}
+	elsif ($dt < 0) {
+	    $dt += 2*pi;
+	}
+    }
+    $dtd = rad2deg ($dt);
+    $self->msg ("Swept angle after modulo: Δθ = $dt ($dtd)");
+
+#    $cr->save ();
+    if ($dt > 0) {
+	print "OK\n";
+	$cr->arc ($cx, $cy, $rx, $theta1, $theta1+$dt);
+    }
+    else {
+	$cr->arc_negative ($cx, $cy, $rx, $theta1,$theta1+$dt);
+    }
+#    $cr->restore ();
+
+return;
 
     # Calculations
-
-    my $x_axis_rotation = (pi * $element->{x_axis_rotation})/180;
+    my $x3 = $element->{x};
+    my $y3 = $element->{y};
     my $large_arc_flag = $element->{large_arc_flag};
     my $sweep_flag = $element->{sweep_flag};
+
+    print "$large_arc_flag $sweep_flag\n";
 
     # Translate $x3, $y3 to relative coords
 
@@ -449,7 +540,7 @@ sub svg_arc
 
     my $radii_ratio = $ry / $rx;
 
-    my ($xe, $ye) = rotate ($x3, $y3, -$x_axis_rotation);
+    my ($xe, $ye) = rotate ($x3, $y3, -$phi);
 
     $ye /= $radii_ratio;
     my $angle = point_angle (0, 0, $xe, $ye);
@@ -460,14 +551,20 @@ sub svg_arc
     if ($xe / 2 > $rx) {
 	$rx = $xe / 2;
     }
+
+    # Centre of the arc
+
     my $xc = $xe / 2;
     my $yc = sqrt ($rx**2 - $xc**2);
 
-    if (! ($large_arc_flag ^ $sweep_flag)) {
+    if (! ($large_arc_flag || $sweep_flag)) {
 	$yc = -$yc;
     }
     ($xe, $ye) = rotate ($xe, 0, $angle);
     ($xc, $yc) = rotate ($xc, $yc, $angle);
+
+    print "xe = $xe ye = $ye\n";
+    print "xc = $xc yc = $yc\n";
 
     my $angle1 = point_angle ($xc, $yc, 0, 0);
     my $angle2 = point_angle ($xc, $yc, $xe, $ye);
@@ -475,13 +572,19 @@ sub svg_arc
     # Draw the arc
 
     $cr->save ();
+    print "$x1 $y1\n";
     $cr->translate ($x1, $y1);
-    $cr->rotate ($x_axis_rotation);
-    if ($sweep_flag) {
-	$cr->arc ($xc, $yc, $rx, $angle1, $angle2);
+    print "phi=$phi\n";
+    $cr->rotate ($phi);
+    my @angles = ($angle1, $angle2);
+    if ($large_arc_flag) {
+	@angles = ($angle2, $angle1);
+    }
+    if ($sweep_flag != $large_arc_flag) {
+	$cr->arc ($xc, $yc, $rx, @angles);
     }
     else {
-	$cr->arc_negative ($xc, $yc, $rx, $angle1, $angle2);
+	$cr->arc_negative ($xc, $yc, $rx, @angles);
     }
     $cr->restore ();
 }
@@ -586,14 +689,6 @@ sub do_svg_attr
 	    $attr{$key} = $value;
 	}
     }
-    my $fill = $attr{fill};
-    if ($fill) {
-	trim_whitespace ($fill);
-    }
-    my $stroke = $attr{stroke};
-    if ($stroke) {
-	trim_whitespace ($stroke);
-    }
     my $cr = $self->{cr};
     my $stroke_width = $attr{"stroke-width"};
     if ($stroke_width) {
@@ -608,16 +703,41 @@ sub do_svg_attr
     if ($linejoin) {
 	$cr->set_line_join ($linejoin);
     }
+    my $fill = $attr{fill};
+    if ($fill) {
+	trim_whitespace ($fill);
+    }
+    if (! $fill) {
+	my $svgfill = $self->{svg}{fill};
+	if ($svgfill) {
+	    $fill = $svgfill;
+	}
+    }
+    my $stroke = $attr{stroke};
+    if ($stroke) {
+	trim_whitespace ($stroke);
+    }
+#    $self->do_fill_stroke ($cr, $fill, $stroke);
+}
 
+sub do_fill_stroke
+{
+    my ($self, $attr) = @_;
+    my $cr = $self->{cr};
+    my $fill = $attr->{fill};
+    my $stroke = $attr->{stroke};
     if ($fill && $fill ne 'none') {
 	if ($stroke && $stroke ne 'none') {
 	    $self->set_colour ($fill);
 	    $cr->fill_preserve ();
+	    $self->msg ("Filling with $fill");
 	    $self->set_colour ($stroke);
 	    $cr->stroke ();
+	    $self->msg ("Stroking with $stroke");
 	}
 	else {
 	    $self->set_colour ($fill);
+	    $self->msg ("Filling with $fill");
 	    $cr->fill ();
 	}
     }
@@ -626,9 +746,10 @@ sub do_svg_attr
 	$cr->stroke ();
     }
     elsif (! $fill && ! $stroke) {
+	$self->msg ("Filling with black");
 	# Fill with black seems to be the default.
-	$self->set_colour ('#000000');
-	$cr->fill ();
+#	$self->set_colour ('#000000');
+#	$cr->fill ();
     }
 }
 
@@ -694,9 +815,7 @@ sub surface
     return $self->{surface};
 }
 
-# Return angle between x axis and point knowing given center.
-
-# https://github.com/Kozea/CairoSVG/blob/74701790b5fd299e99f993b18ea676f3284907b4/cairosvg/surface/helpers.py#L116
+# Direction of vector from ($cx, $cy) to ($px, $py) in radians
 
 sub point_angle
 {
@@ -704,11 +823,23 @@ sub point_angle
     return atan2 ($py - $cy, $px - $cx);
 }
 
+# Rotate $x and $y anticlockwise by $angle in radians
+
 sub rotate
 {
     my ($x, $y, $angle) = @_;
-    return ($x * cos ($angle) - $y * sin ($angle),
-	    $y * cos ($angle) + $x * sin ($angle));
+    my $s = sin $angle;
+    my $c = cos $angle;
+    return ($x * $c - $y * $s, $x * $s + $y * $c);
+}
+
+sub msg
+{
+    my ($self, $msg) = @_;
+    if (! $self->{verbose}) {
+	return;
+    }
+    print "$msg\n";
 }
 
 sub debugmsg
@@ -716,6 +847,42 @@ sub debugmsg
     my (undef, $file, $line) = caller (0);
     printf ("%s:%d: ", $file, $line);
     print "@_\n";
+}
+
+# Eq. 5.4
+
+sub vangle
+{
+    my ($u, $v) = @_;
+    my @u = @$u;
+    my @v = @$v;
+    my $ulen = vlen ($u);
+    my $vlen = vlen ($v);
+    my $cross = vcross ($u, $v);
+    if ($cross == 0) {
+	return 0;
+    }
+    my $sign = $cross / abs ($cross);
+    my $value = vdot ($u, $v) / ($ulen * $vlen);
+    return $sign * acos ($value);
+}
+
+sub vdot
+{
+    my ($u, $v) = @_;
+    return $u->[0] * $v->[0] + $u->[1] * $v->[1];
+}
+
+sub vcross
+{
+    my ($u, $v) = @_;
+    return $u->[0] * $v->[1] - $u->[1] * $v->[0];
+}
+
+sub vlen
+{
+    my ($v) = @_;
+    return sqrt ($v->[0]**2 + $v->[1]**2);
 }
 
 1;

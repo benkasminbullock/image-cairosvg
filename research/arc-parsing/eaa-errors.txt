@@ -1,0 +1,100 @@
+acast.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (192 192 0 1039 380) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+amazon_alexa.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 6 (192 192 0 00 -26 382) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+andotp.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 22 (139 139 0 00 -139 139 139 139 0 00139 139 139 139 0 00139 -139 139 139 0 00 -139 -139) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+angellist.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 6 (79 79 0 00 -34 86) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+Unknown colour url(#g) at /home/ben/software/install/lib/site_perl/5.32.1/i386-freebsd/XML/Parser/Expat.pm line 480.
+bitbucket.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 6 (10 10 0 00 -9.9 -11.7) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+chromium.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 6 (256 256 0 01 -240 371.7) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+Unknown colour url(#A) at /home/ben/software/install/lib/site_perl/5.32.1/i386-freebsd/XML/Parser/Expat.pm line 480.
+digitalocean.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (191 191 0 1065 256) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+disqus.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (159 159 0 1142 56) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+Unknown colour url(#a) at /home/ben/software/install/lib/site_perl/5.32.1/i386-freebsd/XML/Parser/Expat.pm line 480.
+Unknown colour url(#b) at /home/ben/software/install/lib/site_perl/5.32.1/i386-freebsd/XML/Parser/Expat.pm line 480.
+Unknown colour url(#c) at /home/ben/software/install/lib/site_perl/5.32.1/i386-freebsd/XML/Parser/Expat.pm line 480.
+email.png failed: Can't use string ("32896") as an ARRAY ref while "strict refs" in use at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 711.
+espressif.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (188.46 188.46 0 00266.53 266.52) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+Unknown colour url(#a) at /home/ben/software/install/lib/site_perl/5.32.1/i386-freebsd/XML/Parser/Expat.pm line 480.
+finder.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (9.9 9.9 0 0010 10.1) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+firefox.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (51 48 0 1087 -32) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+Unknown colour url(#f) at /home/ben/software/install/lib/site_perl/5.32.1/i386-freebsd/XML/Parser/Expat.pm line 480.
+freecodecamp.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (8.9 8.9 0 005.6 3.3) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+Unknown colour url(#l) at /home/ben/software/install/lib/site_perl/5.32.1/i386-freebsd/XML/Parser/Expat.pm line 480.
+Unknown colour url(#a) at /home/ben/software/install/lib/site_perl/5.32.1/i386-freebsd/XML/Parser/Expat.pm line 480.
+gandi.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 11 (54 54 0 1054 54 54 54 0 00 -54 -54) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+git.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 6 (24.7 24.7 0 00 -35 0) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+gitea.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (9.994 9.994 0 001.989 5.082) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+Unknown colour url(#a) at /home/ben/software/install/lib/site_perl/5.32.1/i386-freebsd/XML/Parser/Expat.pm line 480.
+glitch.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 11 (14 14 0 111 1 5 5 0 10 -1 -1) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+gojek.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 43 (171 171 0 00 -66 328 32 32 0 0044 -24 32 32 0 00 -19 -35 106 106 0 0141 -205 107 107 0 0141 205 32 32 0 0013 61 33 33 0 0012 -3 170 170 0 00 -66 -327) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+google_maps.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 24 (133 133 0 00 -79 -66 136 136 0 00 -40 -6 133 133 0 00 -103 48 133 133 0 00 -31 86) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+gradle.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 6 (61 61 0 00 -85 -1) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+grafana.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 6 (78 78 0 00 -34 45) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+haml.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (11062 11062 0 0028 -153) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+homekit.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 11 (11 11 0 01 -5 0 13 13 0 010 -5) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+intercom.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 12 (10 10 0 01 -11 10 10 10 0 01 -10 -10) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+itch_io.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 6 (3511 3511 0 00 -276 0) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+Unknown colour url(#t) at /home/ben/software/install/lib/site_perl/5.32.1/i386-freebsd/XML/Parser/Expat.pm line 480.
+Unknown colour url(#a) at /home/ben/software/install/lib/site_perl/5.32.1/i386-freebsd/XML/Parser/Expat.pm line 480.
+keepassdx.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 11 (82.83 82.83 0 1057.35 24.26 82.85 82.85 0 00 -57.35 -24.26) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+keskonfai.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 11 (41.5 41.5 0 00 -31.2 65 4239.5 4239.5 0 0134.1 54.9) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+ko-fi.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (89 89 0 000 -178) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+Use of uninitialized value in addition (+) at /home/ben/projects/image-svg-path/lib/Image/SVG/Path.pm line 55.
+Use of uninitialized value in addition (+) at /home/ben/projects/image-svg-path/lib/Image/SVG/Path.pm line 56.
+Use of uninitialized value in addition (+) at /home/ben/projects/image-svg-path/lib/Image/SVG/Path.pm line 55.
+Use of uninitialized value in addition (+) at /home/ben/projects/image-svg-path/lib/Image/SVG/Path.pm line 56.
+linux_mint.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (121 121 0 00120 120) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+Unknown colour url(#a) at /home/ben/software/install/lib/site_perl/5.32.1/i386-freebsd/XML/Parser/Expat.pm line 480.
+macos.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (14 14 0 012 -7) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+mattermost.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 6 (190 190 0 00 -55.3 -69.8) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+messenger.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (14.7 14.7 0 015 10.4) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+Unknown colour url(#b) at /home/ben/software/install/lib/site_perl/5.32.1/i386-freebsd/XML/Parser/Expat.pm line 480.
+Unknown colour url(#m) at /home/ben/software/install/lib/site_perl/5.32.1/i386-freebsd/XML/Parser/Expat.pm line 480.
+Unknown colour url(#t) at /home/ben/software/install/lib/site_perl/5.32.1/i386-freebsd/XML/Parser/Expat.pm line 480.
+ok.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (36.5 36.5 0 0136.5 36.5) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+opensource.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (180 180 0 11128 0) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+pixelfed.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 18 (96 96 0 00 -15 -17 84 84 0 00 -117 -115 87 87 0 00 -22 19) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+pocketcasts.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (144 144 0 11144 -144) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+qq.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 11 (57 32 0 00114 0 57 32 0 00 -114 0) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+redhat.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (27 27 0 000 -7) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+rust.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 6 (190 190 0 00 -76 230) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+Unknown colour url(#a) at /home/ben/software/install/lib/site_perl/5.32.1/i386-freebsd/XML/Parser/Expat.pm line 480.
+samsung_internet.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (228 80 15 10441 118) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+samsung_swoop.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 22 (61 208 80 01 -203 98 61 217 80 01 -225 -25 63 211 80 01204 -97 61 217 80 01224 23) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+sentry.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 6 (31 31 0 00 -54 0) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+signal.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 6 (156 156 0 00 -132 239) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+slack.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 6 (39 39 0 01 -78 0) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+svelte.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 22 (103 103 0 00 -46 69 108 108 0 0010 69 103 103 0 00 -15 39 109 109 0 0019 82) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+svg.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 6 (22 22 0 01 -22 22) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+teamspeak.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (1532 1532 0 0042 -10) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+Unknown colour url(#a) at /home/ben/software/install/lib/site_perl/5.32.1/i386-freebsd/XML/Parser/Expat.pm line 480.
+tutanota.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (1700 1700 0 0037 -14) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+twitter.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 6 (72 72 0 01 -40 12) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+ubiquiti.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 6 (147 147 0 01 -3 28) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+ubisoft.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (170 170 0 01118 232) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+unicode.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (779 779 0 001 50) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+uphold.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 6 (47 47 0 01 -38 0) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+uplay.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (170 170 0 01118 232) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+Use of uninitialized value in addition (+) at /home/ben/projects/image-svg-path/lib/Image/SVG/Path.pm line 55.
+Use of uninitialized value in addition (+) at /home/ben/projects/image-svg-path/lib/Image/SVG/Path.pm line 56.
+Use of uninitialized value in addition (+) at /home/ben/projects/image-svg-path/lib/Image/SVG/Path.pm line 55.
+Use of uninitialized value in addition (+) at /home/ben/projects/image-svg-path/lib/Image/SVG/Path.pm line 56.
+Use of uninitialized value in addition (+) at /home/ben/projects/image-svg-path/lib/Image/SVG/Path.pm line 55.
+Use of uninitialized value in addition (+) at /home/ben/projects/image-svg-path/lib/Image/SVG/Path.pm line 56.
+Use of uninitialized value in addition (+) at /home/ben/projects/image-svg-path/lib/Image/SVG/Path.pm line 55.
+Use of uninitialized value in addition (+) at /home/ben/projects/image-svg-path/lib/Image/SVG/Path.pm line 56.
+Use of uninitialized value in addition (+) at /home/ben/projects/image-svg-path/lib/Image/SVG/Path.pm line 55.
+Use of uninitialized value in addition (+) at /home/ben/projects/image-svg-path/lib/Image/SVG/Path.pm line 56.
+Use of uninitialized value in addition (+) at /home/ben/projects/image-svg-path/lib/Image/SVG/Path.pm line 55.
+Use of uninitialized value in addition (+) at /home/ben/projects/image-svg-path/lib/Image/SVG/Path.pm line 56.
+Use of uninitialized value in addition (+) at /home/ben/projects/image-svg-path/lib/Image/SVG/Path.pm line 55.
+Use of uninitialized value in addition (+) at /home/ben/projects/image-svg-path/lib/Image/SVG/Path.pm line 56.
+Use of uninitialized value in addition (+) at /home/ben/projects/image-svg-path/lib/Image/SVG/Path.pm line 55.
+Use of uninitialized value in addition (+) at /home/ben/projects/image-svg-path/lib/Image/SVG/Path.pm line 56.
+Use of uninitialized value in addition (+) at /home/ben/projects/image-svg-path/lib/Image/SVG/Path.pm line 55.
+Use of uninitialized value in addition (+) at /home/ben/projects/image-svg-path/lib/Image/SVG/Path.pm line 56.
+wechat.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (15 15 0 110 -29) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+wekan.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 6 (680 680 0 01 -36 77) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+whatsapp.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (138 138 0 1150 47) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+wifi.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (11 11 0 110 -1) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+wire.png failed: extract_path_info: Need multiple of 7 parameters for arc, got 5 (1 1 0 00186 0) at /home/ben/projects/image-cairosvg/lib/Image/CairoSVG.pm line 348.
+Unknown colour url(#a) at /home/ben/software/install/lib/site_perl/5.32.1/i386-freebsd/XML/Parser/Expat.pm line 480.
