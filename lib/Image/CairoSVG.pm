@@ -113,13 +113,8 @@ sub handle_end
 {
     my ($self, $parser, $tag) = @_;
     my $element = pop @{$self->{elements}};
-    print "</$element->{tag}>\n";
     my $attr = $element->{attr};
     $self->do_fill_stroke ($attr);
-    # At the end of a group, delete its attributes.
-    if ($tag eq 'g') {
-	delete $self->{attr};
-    }
 }
 
 # <svg> tag seen
@@ -143,6 +138,7 @@ sub svg
     if ($attr{stroke}) {
 	$self->{stroke} = $attr{stroke};
     }
+
 
     # Use viewBox attribute
 
@@ -178,6 +174,7 @@ sub svg
 	$self->{surface} = $surface;
 	$self->make_cr ();
     }
+    $self->do_svg_attr (%attr);
 }
 
 # Start tag handler for the XML parser. This is private.
@@ -186,12 +183,29 @@ sub handle_start
 {
     my ($self, $parser, $tag, %attr) = @_;
 
+    my $parent = $self->{elements}[-1];
+    if ($parent) {
+	my $pattr = $parent->{attr};
+	for my $key (qw!
+	    fill
+	    stroke
+	    stroke-linecap
+	    stroke-linejoin
+	    stroke-width
+	!) {
+	    # So where were the spiders
+	    # While the fly tried to break our balls
+	    if ($pattr->{$key} && ! $attr{$key}) {
+		$attr{$key} = $pattr->{$key};
+	    }
+	}
+    }
+
     my $element = {
 	tag => $tag,
 	attr => \%attr,
     };
     push @{$self->{elements}}, $element;
-    print "<$tag>\n";
 
     if ($tag eq 'svg') {
 	$self->svg (%attr);
@@ -225,18 +239,22 @@ sub handle_start
     }
     else {
 	if ($self->{verbose}) {
-	    print "Unhandled tag '$tag'.\n";
+	    # There are probably many of these since this module is
+	    # not up to spec, so only complain if the user wants
+	    # "verbose" messages.
+	    carp "Unhandled SVG tag '$tag'";
 	}
-	#	warn "Unknown tag '$tag' in $self->{file}";
     }
 
     # http://www.princexml.com/doc/7.1/svg/
     # g, rect, circle, ellipse, line, path, text, tspan
+    # Also "use" etc.
 }
 
 sub g
 {
     my ($self, %attr) = @_;
+    # Group element
 }
 
 sub rect
@@ -353,7 +371,8 @@ sub path
 {
     my ($self, %attr) = @_;
 
-    # Get and parse the "d" attribute from the path.
+    # Get and parse the "d" attribute from the path using
+    # Image::SVG::Path.
 
     my $d = $attr{d};
     croak "No d in path" unless $d;
@@ -395,9 +414,11 @@ sub path
 	    $cr->line_to (@{$element->{point}});
 	}
 	elsif ($key eq 'C') {
-	    $cr->curve_to (@{$element->{control1}},
-			   @{$element->{control2}},
-			   @{$element->{end}});
+	    $cr->curve_to (
+		@{$element->{control1}},
+		@{$element->{control2}},
+		@{$element->{end}},
+	    );
 	}
 	elsif ($key eq 'Z') {
 	    $cr->close_path ();
@@ -449,26 +470,45 @@ sub svg_arc
     }
     my $fa = $element->{large_arc_flag};
     my $fs = $element->{sweep_flag};
-    $self->msg ("Inputs: large-arc-flag: $fa, sweep-flag: $fs");
+    if ($fa != 0 && $fa != 1) {
+	croak "large-arc-flag must be either 0 or 1";
+    }
+    if ($fs != 0 && $fs != 1) {
+	croak "sweep-flag must be either 0 or 1";
+    }
+    $self->msg ("A: inputs: large-arc-flag: $fa, sweep-flag: $fs");
     # Start points
     my ($x1, $y1) = $cr->get_current_point ();
-    $self->msg ("Inputs: arc start: ($x1, $y1)");
-    $self->msg ("Inputs: arc end: ($x2, $y2)");
-    $self->msg ("Inputs: radii: ($rx, $ry)");
+    $self->msg ("A: inputs: arc start: ($x1, $y1)");
+    $self->msg ("A: inputs: arc end: ($x2, $y2)");
+    $self->msg ("A: inputs: radii: ($rx, $ry)");
     my $phi = deg2rad ($element->{x_axis_rotation});
-    $self->msg ("Inputs: φ = $phi radians");
+    $self->msg ("A: inputs: φ = $phi radians");
     my ($xd, $yd) = (($x1-$x2)/2, ($y1-$y2)/2);
-    $self->msg ("Midpoint of vector from end to start: ($xd, $yd)");
+    #    $self->msg ("Midpoint of vector from end to start: ($xd, $yd)");
     my $s = sin $phi;
     my $c = cos $phi;
-    $self->msg ("sin φ = $s, cos φ = $c");
+    #    $self->msg ("sin φ = $s, cos φ = $c");
+    # Eq. 5.1
     my ($x1d, $y1d) = ($xd * $c + $yd * $s, - $xd * $s + $yd * $c);
     $self->msg ("Rotated midpoint: x1' = $x1d, y1' = $y1d");
-    my $den = ($rx * $y1d)**2 + ($ry * $x1d)**2;
-    my $num = ($rx * $ry)**2 - $den;
-    $self->msg ("den = $den, num = $num");
-    my $factor = sqrt ($num / $den);
-    $self->msg ("factor = $factor");
+    my $factor;
+    my $lambda = ($x1d/$rx)**2 + ($y1d/$ry)**2;
+    if ($lambda > 1) {
+	$self->msg ("$lambda > 1, increasing radii");
+	my $sqrtlambda = sqrt ($lambda);
+
+	$rx *= $sqrtlambda;
+	$ry *= $sqrtlambda;
+	$factor = 0;
+    }
+    else {
+	my $den = ($rx * $y1d)**2 + ($ry * $x1d)**2;
+	my $num = ($rx * $ry)**2 - $den;
+	#    $self->msg ("den = $den, num = $num");
+	$factor = sqrt ($num / $den);
+    }
+    #    $self->msg ("factor = $factor");
     my $sign = 1;
     if ($fa == $fs) {
 	$sign = -1;
@@ -476,23 +516,25 @@ sub svg_arc
     $factor *= $sign;
     my $cxd =   $factor * $rx * $y1d / $ry;
     my $cyd = - $factor * $ry * $x1d / $rx;
-    $self->msg ("Transformed centre: ($cxd, $cyd)");
+    #    $self->msg ("A: transformed centre: ($cxd, $cyd)");
     # Eq 5.3
     my $cx = ($c * $cxd - $s * $cyd) + ($x1 + $x2) / 2;
     my $cy = ($s * $cxd + $c * $cyd) + ($y1 + $y2) / 2;
-    $self->msg ("Centre of ellipse: ($cx, $cy)");
-
+    $self->msg (sprintf ("A: centre of ellipse: (%.2f, %.2f)", $cx, $cy));
     my @vec1 = (1,0);
     # Eq. 5.5
     my $xv2 = ($x1d - $cxd)/$rx;
     my $yv2 = ($y1d - $cyd)/$ry;
     my @vec2 = ($xv2, $yv2);
     my $theta1 = vangle (\@vec1, \@vec2);
-    $self->msg ("Start angle θ1 = $theta1");
+    my $theta1d = rad2deg ($theta1);
+    $self->msg (sprintf ("Start angle θ1 = %.2f (%.2f°)", $theta1, $theta1d));
     # Eq. 5.6
     my $xv3 = (-$x1d - $cxd)/$rx;
     my $yv3 = (-$y1d - $cyd)/$ry;
     my @vec3 = ($xv3, $yv3);
+    #    $self->msg ("vec2 = @vec2");
+    #    $self->msg ("vec3 = @vec3");
     my $dt = vangle (\@vec2, \@vec3);
     my $dtd = rad2deg ($dt);
     $self->msg ("Swept angle initially: Δθ = $dt ($dtd)");
@@ -506,87 +548,75 @@ sub svg_arc
 	if ($dt > 0) {
 	    $dt -= 2*pi;
 	}
-	elsif ($dt < 0) {
+    }
+    elsif ($fs == 1) {
+	if ($dt < 0) {
 	    $dt += 2*pi;
 	}
     }
     $dtd = rad2deg ($dt);
-    $self->msg ("Swept angle after modulo: Δθ = $dt ($dtd)");
+    $self->msg (sprintf ("Swept angle Δθ = %.2f (%.2f°)", $dt, $dtd));
 
-#    $cr->save ();
-    if ($dt > 0) {
-	print "OK\n";
+    if ($fs) {
 	$cr->arc ($cx, $cy, $rx, $theta1, $theta1+$dt);
     }
     else {
-	$cr->arc_negative ($cx, $cy, $rx, $theta1,$theta1+$dt);
+	$cr->arc_negative ($cx, $cy, $rx, $theta1, $theta1+$dt);
     }
-#    $cr->restore ();
+}
 
-return;
+# Helper for svg_arc
 
-    # Calculations
-    my $x3 = $element->{x};
-    my $y3 = $element->{y};
-    my $large_arc_flag = $element->{large_arc_flag};
-    my $sweep_flag = $element->{sweep_flag};
+# Eq. 5.4 of
+# https://www.w3.org/TR/SVG/implnote.html#ArcImplementationNotes
 
-    print "$large_arc_flag $sweep_flag\n";
-
-    # Translate $x3, $y3 to relative coords
-
-    $x3 -= $x1;
-    $y3 -= $y1;
-
-    my $radii_ratio = $ry / $rx;
-
-    my ($xe, $ye) = rotate ($x3, $y3, -$phi);
-
-    $ye /= $radii_ratio;
-    my $angle = point_angle (0, 0, $xe, $ye);
-
-    $xe = sqrt ($xe**2 + $ye**2);
-    $ye = 0;
-
-    if ($xe / 2 > $rx) {
-	$rx = $xe / 2;
-    }
-
-    # Centre of the arc
-
-    my $xc = $xe / 2;
-    my $yc = sqrt ($rx**2 - $xc**2);
-
-    if (! ($large_arc_flag || $sweep_flag)) {
-	$yc = -$yc;
-    }
-    ($xe, $ye) = rotate ($xe, 0, $angle);
-    ($xc, $yc) = rotate ($xc, $yc, $angle);
-
-    print "xe = $xe ye = $ye\n";
-    print "xc = $xc yc = $yc\n";
-
-    my $angle1 = point_angle ($xc, $yc, 0, 0);
-    my $angle2 = point_angle ($xc, $yc, $xe, $ye);
-
-    # Draw the arc
-
-    $cr->save ();
-    print "$x1 $y1\n";
-    $cr->translate ($x1, $y1);
-    print "phi=$phi\n";
-    $cr->rotate ($phi);
-    my @angles = ($angle1, $angle2);
-    if ($large_arc_flag) {
-	@angles = ($angle2, $angle1);
-    }
-    if ($sweep_flag != $large_arc_flag) {
-	$cr->arc ($xc, $yc, $rx, @angles);
+sub vangle
+{
+    my ($u, $v) = @_;
+    my @u = @$u;
+    my @v = @$v;
+    my $ulen = vlen ($u);
+    my $vlen = vlen ($v);
+    my $sign;
+    my $vdot = vdot ($u, $v);
+    my $cross = vcross ($u, $v);
+    if ($cross == 0) {
+	if ($vdot < 0) {
+	    $sign = -1;
+	}
+	else {
+	    $sign = 1;
+	}
     }
     else {
-	$cr->arc_negative ($xc, $yc, $rx, @angles);
+	$sign = $cross / abs ($cross);
     }
-    $cr->restore ();
+    my $value = $vdot / ($ulen * $vlen);
+    return $sign * acos ($value);
+}
+
+# Helper for vangle
+
+sub vdot
+{
+    my ($u, $v) = @_;
+    return $u->[0] * $v->[0] + $u->[1] * $v->[1];
+}
+
+# Helper for vangle
+
+sub vcross
+{
+    my ($u, $v) = @_;
+    return $u->[0] * $v->[1] - $u->[1] * $v->[0];
+}
+
+# Helper for vangle
+
+sub vlen
+{
+    my ($v) = @_;
+    return sqrt ($v->[0]**2 + $v->[1]**2);
 }
 
 # Quadratic bezier curve shim for Cairo
@@ -717,7 +747,9 @@ sub do_svg_attr
     if ($stroke) {
 	trim_whitespace ($stroke);
     }
-#    $self->do_fill_stroke ($cr, $fill, $stroke);
+    my $fill_opacity = $attr{'fill-opacity'};
+    # Not sure how to handle this yet.
+    #    $self->do_fill_stroke ($cr, $fill, $stroke);
 }
 
 sub do_fill_stroke
@@ -726,6 +758,7 @@ sub do_fill_stroke
     my $cr = $self->{cr};
     my $fill = $attr->{fill};
     my $stroke = $attr->{stroke};
+
     if ($fill && $fill ne 'none') {
 	if ($stroke && $stroke ne 'none') {
 	    $self->set_colour ($fill);
@@ -748,8 +781,8 @@ sub do_fill_stroke
     elsif (! $fill && ! $stroke) {
 	$self->msg ("Filling with black");
 	# Fill with black seems to be the default.
-#	$self->set_colour ('#000000');
-#	$cr->fill ();
+	$self->set_colour ('#000000');
+	$cr->fill ();
     }
 }
 
@@ -847,42 +880,6 @@ sub debugmsg
     my (undef, $file, $line) = caller (0);
     printf ("%s:%d: ", $file, $line);
     print "@_\n";
-}
-
-# Eq. 5.4
-
-sub vangle
-{
-    my ($u, $v) = @_;
-    my @u = @$u;
-    my @v = @$v;
-    my $ulen = vlen ($u);
-    my $vlen = vlen ($v);
-    my $cross = vcross ($u, $v);
-    if ($cross == 0) {
-	return 0;
-    }
-    my $sign = $cross / abs ($cross);
-    my $value = vdot ($u, $v) / ($ulen * $vlen);
-    return $sign * acos ($value);
-}
-
-sub vdot
-{
-    my ($u, $v) = @_;
-    return $u->[0] * $v->[0] + $u->[1] * $v->[1];
-}
-
-sub vcross
-{
-    my ($u, $v) = @_;
-    return $u->[0] * $v->[1] - $u->[1] * $v->[0];
-}
-
-sub vlen
-{
-    my ($v) = @_;
-    return sqrt ($v->[0]**2 + $v->[1]**2);
 }
 
 1;

@@ -6,8 +6,8 @@ use lib "/home/ben/projects/image-svg-path/lib";
 use lib "/home/ben/projects/image-cairosvg/lib";
 use Image::CairoSVG;
 
-#my $verbose;
-my $verbose = 1;
+my $verbose;
+#$verbose = 1;
 binmode STDOUT, ":encoding(utf8)";
 my $wwwdir = '/usr/local/www/data';
 my $dir = "$wwwdir/sti";
@@ -15,7 +15,7 @@ md ($dir, $verbose);
 
 my $indir = "/home/ben/software/SuperTinyIcons/images/svg";
 if (! -d $indir) {
-    die "No $indir";
+#    die "No $indir";
 }
 my @svg = <$indir/*.svg>;
 die "$indir is empty" unless @svg > 0;
@@ -27,13 +27,17 @@ my ($html, $body) = make_page (title => 'Super Tiny Icons');
 my $table = $body->push ('table');
 my %attr = (width => 500, height => 500);
 for my $file (@svg) {
-    if ($file !~ /\/youtube/) {
-	next;
+#print "$file\n";
+    if ($file !~ /\/samsung_internet\./) {
+#	next;
     }
     my $cairosvg = Image::CairoSVG->new (verbose => $verbose);
     my $base = $file;
     $base =~ s!.*/!!;
     copy $file, "$svgdir/$base" or die $!;
+    my $hrow = $table->push ('tr');
+    $hrow->push ('th', text => $base, class => 'svgfilename',
+		 attr => {colspan => 2});
     my $row = $table->push ('tr');
     my $svgtd = $row->push ('td');
     $svgtd->push ('img', attr => {src => "svg/$base", %attr});

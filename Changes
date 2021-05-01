@@ -1,5 +1,13 @@
 Revision log for Perl module "Image::CairoSVG"
 
+0.14 2021-05-01
+
+- Improved support for arcs within paths (a or A elements)
+-- Copy of Python code replaced by W3 consortium code
+- Image::SVG::Path improvements reflected
+- Better handling of inherited commands
+- Expand list of unsupported things in documentation
+
 0.13 2021-04-26
 
 - Support stroke-linecap and stroke-linejoin attributes

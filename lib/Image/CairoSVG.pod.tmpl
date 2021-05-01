@@ -180,12 +180,22 @@ XML::Parser is used for parsing SVG files.
 
 =head1 SEE ALSO
 
+=head2 Demonstration website - Super Tiny Icons
+
+The demonstration website
+L<https://benkasminbullock.github.io/supertinyiconscairosvg/> shows
+the output of Image::CairoSVG on the Super Tiny Icons collection.
+
+=head2 Other software
+
 =over
 
 =item CairoSVG
 
 L<CairoSVG|http://cairosvg.org/> is a Python SVG renderer in
-Cairo. Parts of the code here are based on it.
+Cairo. Originally parts of this were based on it, but these parts were
+all replaced in version 0.14 of this module by code based on the W3
+Consortium code.
 
 =back
 
@@ -226,13 +236,45 @@ L<SVG - Scalable Vector Graphics with Perl|http://perlmaven.com/scalable-vector-
 
 =back
 
+
 =head1 BUGS
 
-This module is a "least effort" attempt to get the parts of SVG which
-the author needs rendered, rendered. It doesn't even pretend to be a
-full SVG renderer. So, if you find the module doesn't do some part of
-SVG which you want done, please add that to the module, and contribute
-your addition to this module via the github repository.
+=over
+
+=item Copied paths
+
+Does not support xlink:href (copied paths).
+
+=item Elliptical arcs
+
+Elliptical arcs are not handled correctly.
+
+=item Gradients
+
+Gradients are not supported.
+
+=item Groups
+
+Groups are not supported.
+
+=item Inherited fill / stroke values
+
+The handling of fill and stroke inherited from parent elements is
+patchy.
+
+=item Opacity
+
+Opacity support is missing.
+
+=item stroke-dasharray
+
+stroke-dasharray is not supported.
+
+=item Transforms
+
+Transforms are not handled.
+
+=back
 
 [% INCLUDE "author" %]
 
