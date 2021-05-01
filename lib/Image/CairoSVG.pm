@@ -111,7 +111,8 @@ sub render
 
 sub handle_end
 {
-    my ($self, $parser, $tag) = @_;
+    # Last argument is $tag
+    my ($self, $parser, undef) = @_;
     my $element = pop @{$self->{elements}};
     my $attr = $element->{attr};
     $self->do_fill_stroke ($attr);
@@ -573,8 +574,6 @@ sub svg_arc
 sub vangle
 {
     my ($u, $v) = @_;
-    my @u = @$u;
-    my @v = @$v;
     my $ulen = vlen ($u);
     my $vlen = vlen ($v);
     my $sign;
