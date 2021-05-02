@@ -3,7 +3,7 @@ use warnings;
 use strict;
 use utf8;
 
-our $VERSION = '0.15';
+our $VERSION = '0.16';
 
 # Core modules
 use Carp qw/carp croak/;
@@ -45,7 +45,7 @@ sub new
     if ($context) {
 	$self->{cr} = $context;
 	if ($surface) {
-	    carp "Value of surface ignored: specify either cr or surface";
+	    carp "Value of surface option ignored: specify only one of either context or surface";
 	}
 	if ($self->{verbose}) {
 	    debugmsg ("Using user-supplied context $self->{cr}");
@@ -60,6 +60,8 @@ sub new
     }
     return $self;
 }
+
+# Make the Cairo context for our surface.
 
 sub make_cr
 {
@@ -114,6 +116,10 @@ sub handle_end
     my $element = pop @{$self->{elements}};
     my $attr = $element->{attr};
     $self->do_fill_stroke ($attr);
+    if ($attr->{transform}) {
+	my $cr = $self->{cr};
+	$cr->restore ();
+    }
 }
 
 # <svg> tag seen
@@ -173,7 +179,7 @@ sub svg
 	$self->{surface} = $surface;
 	$self->make_cr ();
     }
-    $self->do_svg_attr (%attr);
+   $self->do_svg_attr (%attr);
 }
 
 # Start tag handler for the XML parser. This is private.
@@ -187,9 +193,16 @@ sub handle_start
 	my $pattr = $parent->{attr};
 	for my $key (qw!
 	    fill
+	    fill-opacity
+	    fill-rule
+	    opacity
 	    stroke
+	    stroke-dasharray
+	    stroke-dashoffset
 	    stroke-linecap
 	    stroke-linejoin
+	    stroke-miterlimit
+	    stroke-opacity
 	    stroke-width
 	!) {
 	    # So where were the spiders
@@ -253,6 +266,7 @@ sub handle_start
 sub g
 {
     my ($self, %attr) = @_;
+    $self->do_svg_attr (%attr);
     # Group element
 }
 
@@ -768,23 +782,99 @@ sub do_svg_attr
     if ($linejoin) {
 	$cr->set_line_join ($linejoin);
     }
-    my $fill = $attr{fill};
-    if ($fill) {
-	$fill = trim ($fill);
+    my $transform = $attr{transform};
+    if ($transform) {
+	$cr->save ();
+	$self->do_transforms (%attr);
     }
-    if (! $fill) {
-	my $svgfill = $self->{svg}{fill};
-	if ($svgfill) {
-	    $svgfill = trim ($svgfill);
+}
+
+# SVG accepts things like -30-40 as two numbers in transform
+# arguments.
+my $sep = qr!(?:\s+|\s*,\s*)!;
+my $num = qr![-0-9\.]+!;
+my $sepnum = qr!(?:$sep$num|$sep?-$num)!;
+
+sub sepnum
+{
+    my ($sepnum) = @_;
+    $sepnum =~ s!^$sep!!;
+    return $sepnum;
+}
+
+sub do_transforms
+{
+    my ($self, %attr) = @_;
+    my $cr = $self->{cr};
+    # Transformers - robots in disguise
+    my $transform = $attr{transform};
+    if ($transform =~ s/translate\s*\(\s*($num)($sepnum)\s*\)//) {
+	my $x = $1;
+	my $y = sepnum ($2);
+	$self->msg ("translate ($x, $y)");
+	$cr->translate ($x, $y);
+    }
+    if ($transform =~ s/scale\s*\(\s*($num)(?:$sep($num))?\s*\)//) {
+	my $x = $1;
+	my $y = $2;
+	if (defined $y) {
+	    $y = sepnum ($y);
+	}
+	else {
+	    # scale may take one argument
+	    $y = $x;
+	}
+	$self->msg ("scale ($x, $y)");
+	$cr->scale ($x, $y);
+    }
+    if ($transform =~ s/
+	rotate\s*\(
+	\s*($num)\s*
+	(?:($sepnum)($sepnum))?
+	\s*\)//x) {
+	my $angle = $1;
+	my $x = $2;
+	my $y = $3;
+	my $trans;
+	if (defined $x && defined $y) {
+	    $x = sepnum ($x);
+	    $y = sepnum ($y);
+	    $trans = 1;
+	}
+	if ($trans) {
+	    $cr->translate (-$x, -$y)
+	}
+	$cr->rotate (deg2rad ($angle));
+	if ($trans) {
+	    $cr->translate ($x, $y)
+	}
+	if ($trans) {
+	    $self->msg ("rotate $angle $x $y");
+	}
+	else {
+	    $self->msg ("rotate $angle");
 	}
     }
-    my $stroke = $attr{stroke};
-    if ($stroke) {
-	trim ($stroke);
+    if ($transform =~ s!
+	matrix\s*
+	\(\s*
+	($num)
+	($sepnum)
+	($sepnum)
+	($sepnum)
+	($sepnum)
+	($sepnum)
+	\s*\)
+    !!x) {
+	my @nums = ($1, $2, $3, $4, $5, $6);
+	@nums = map {sepnum ($_)} @nums;
+	my $matrix = Cairo::Matrix->init (@nums);
+	$cr->set_matrix ($matrix);
     }
-    my $fill_opacity = $attr{'fill-opacity'};
-    # Not sure how to handle this yet.
-    #    $self->do_fill_stroke ($cr, $fill, $stroke);
+    $transform = trim ($transform);
+    if ($transform) {
+	warn "Unhandled '$transform'";
+    }
 }
 
 sub do_fill_stroke
@@ -793,30 +883,40 @@ sub do_fill_stroke
     my $cr = $self->{cr};
     my $fill = $attr->{fill};
     my $stroke = $attr->{stroke};
+    # These can be undefined
+    my $fill_opacity = $attr->{'fill-opacity'};
+    my $stroke_opacity = $attr->{'stroke-opacity'};
+    my $opacity = $attr->{opacity};
+    if (defined $opacity && ! defined $fill_opacity) {
+	$fill_opacity = $opacity;
+    }
+    if (defined $opacity && ! defined $stroke_opacity) {
+	$stroke_opacity = $opacity;
+    }
 
     if ($fill && $fill ne 'none') {
 	if ($stroke && $stroke ne 'none') {
-	    $self->set_colour ($fill);
+	    $self->set_colour ($fill, $fill_opacity);
 	    $cr->fill_preserve ();
 	    $self->msg ("Filling with $fill");
-	    $self->set_colour ($stroke);
+	    $self->set_colour ($stroke, $stroke_opacity);
 	    $cr->stroke ();
 	    $self->msg ("Stroking with $stroke");
 	}
 	else {
-	    $self->set_colour ($fill);
+	    $self->set_colour ($fill, $fill_opacity);
 	    $self->msg ("Filling with $fill");
 	    $cr->fill ();
 	}
     }
     elsif ($stroke && $stroke ne 'none') {
-	$self->set_colour ($stroke);
+	$self->set_colour ($stroke, $stroke_opacity);
 	$cr->stroke ();
     }
     elsif (! $fill && ! $stroke) {
 	$self->msg ("Filling with black");
 	# Fill with black seems to be the default.
-	$self->set_colour ('#000000');
+	$self->set_colour ('#000000', $fill_opacity);
 	$cr->fill ();
     }
 }
@@ -988,7 +1088,7 @@ sub name2colour
 
 sub set_colour
 {
-    my ($self, $colour) = @_;
+    my ($self, $colour, $opacity) = @_;
     my $cr = $self->{cr};
     # Hex digit
     my $h = qr/[0-9a-f]/i;
@@ -1009,7 +1109,18 @@ sub set_colour
     else {
 	@c = name2colour ($colour);
     }
-    $cr->set_source_rgb (@c);
+    if (defined $opacity) {
+	# There ain't no sanity clause
+	if ($opacity > 1 || $opacity < 0) {
+	    carp "Opacity value $opacity out of bounds";
+	    $opacity = 1;
+	}
+	push @c, $opacity;
+	$cr->set_source_rgba (@c);
+    }
+    else {
+	$cr->set_source_rgb (@c);
+    }
 }
 
 sub surface
