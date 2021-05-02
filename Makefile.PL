@@ -17,7 +17,6 @@ WriteMakefile (
 	# These are in Perl already.
 	'Carp' => '0',
 	'Math::Trig' => '0',
-	'ExtUtils::ParseXS::Utilities' => '0',
 	# These may need to be installed by the user.
 	'Cairo' => '0',
 	'Image::SVG::Path' => '0.36',

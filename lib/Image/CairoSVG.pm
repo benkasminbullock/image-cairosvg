@@ -7,15 +7,13 @@ our $VERSION = '0.15';
 
 # Core modules
 use Carp qw/carp croak/;
-use ExtUtils::ParseXS::Utilities 'trim_whitespace';
 use Math::Trig qw!acos pi rad2deg deg2rad!;
 use Scalar::Util 'looks_like_number';
 
 # Installed modules
 use XML::Parser;
 use Cairo;
-use Graphics::ColorNames::WWW;
-use Image::SVG::Path qw/extract_path_info create_path_string/;
+use Image::SVG::Path qw/extract_path_info/;
 
 our $default_surface_type = 'argb32';
 our $default_surface_size = 100;
@@ -772,17 +770,17 @@ sub do_svg_attr
     }
     my $fill = $attr{fill};
     if ($fill) {
-	trim_whitespace ($fill);
+	$fill = trim ($fill);
     }
     if (! $fill) {
 	my $svgfill = $self->{svg}{fill};
 	if ($svgfill) {
-	    $fill = $svgfill;
+	    $svgfill = trim ($svgfill);
 	}
     }
     my $stroke = $attr{stroke};
     if ($stroke) {
-	trim_whitespace ($stroke);
+	trim ($stroke);
     }
     my $fill_opacity = $attr{'fill-opacity'};
     # Not sure how to handle this yet.
@@ -1052,6 +1050,13 @@ sub debugmsg
     my (undef, $file, $line) = caller (0);
     printf ("%s:%d: ", $file, $line);
     print "@_\n";
+}
+
+sub trim
+{
+    my ($s) = @_;
+    $s =~ s!^\s+|\s+$!!g;
+    return $s;
 }
 
 1;
