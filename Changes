@@ -1,5 +1,10 @@
 Revision log for Perl module "Image::CairoSVG"
 
+0.15 2021-05-01
+
+- Use our own named colours, remove Graphics::ColorNames::WWW
+- Rounded rectangle support
+
 0.14 2021-05-01
 
 - Improved support for arcs within paths (a or A elements)

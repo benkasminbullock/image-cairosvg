@@ -28,7 +28,7 @@ my $table = $body->push ('table');
 my %attr = (width => 500, height => 500);
 for my $file (@svg) {
 #print "$file\n";
-    if ($file !~ /\/samsung_internet\./) {
+    if ($file !~ /\/email\./) {
 #	next;
     }
     my $cairosvg = Image::CairoSVG->new (verbose => $verbose);

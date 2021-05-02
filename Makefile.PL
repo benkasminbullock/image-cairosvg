@@ -20,7 +20,6 @@ WriteMakefile (
 	'ExtUtils::ParseXS::Utilities' => '0',
 	# These may need to be installed by the user.
 	'Cairo' => '0',
-	'Graphics::ColorNames::WWW' => '1.14',
 	'Image::SVG::Path' => '0.36',
 	'XML::Parser' => '0',
     },

@@ -203,6 +203,11 @@ Consortium code.
 
 =over
 
+=item L<Image::LibRSVG>
+
+Perl extension for a Gnome library called librsvg which converts SVG
+to PNG or JPEG, etc. I have not tested this library.
+
 =item L<Image::SVG::Path>
 
 This is for reading the "d" attribute of SVG paths.
@@ -215,14 +220,17 @@ This extends the L<Marpa::R2> parser to parse SVG.
 
 This is for generating SVG documents.
 
-=item L<Image::LibRSVG>
+=item L<SVG::Parser>
 
-Perl extension for a Gnome library called librsvg which converts SVG
-to PNG or JPEG, etc. I have not tested this library.
+Parse the XML for SVG files. It can use either L<XML::Parser> or
+L<XML::SAX> but XML::Parser seems not to work. See
+L<https://rt.cpan.org/Ticket/Display.html?id=136404>.
 
 =item L<SVG::Rasterize>
 
-Rasterize SVG content to pixel graphics.
+Rasterize SVG content to pixel graphics. I couldn't get this to
+produce output. See
+L<https://rt.cpan.org/Ticket/Display.html?id=136405>.
 
 =back
 
@@ -240,6 +248,10 @@ L<SVG - Scalable Vector Graphics with Perl|http://perlmaven.com/scalable-vector-
 =head1 BUGS
 
 =over
+
+=item Clip paths
+
+Does not support clip paths
 
 =item Copied paths
 
