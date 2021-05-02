@@ -3,7 +3,7 @@ use warnings;
 use strict;
 use utf8;
 
-our $VERSION = '0.14';
+our $VERSION = '0.15';
 
 # Core modules
 use Carp qw/carp croak/;
@@ -823,8 +823,10 @@ sub do_fill_stroke
     }
 }
 
-# Graphics::ColorNames::WWW is yet another bonkers module, for some
-# reason it returns these as integers.
+# Graphics::ColorNames::WWW for some reason returns these as integers
+# with the R, G, and B components multiplied together, so to use that
+# module we would need to then divide the numbers to get the R, G and
+# B values back. It was easier just to copy and paste.
 
 my %color2rgb = (
     'aliceblue'         => [240, 248, 255],

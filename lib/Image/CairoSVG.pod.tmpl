@@ -96,6 +96,36 @@ width and height specified in the C<viewBox> attribute.
 
 Calling with a scalar containing XML was added in version 0.08.
 
+=head1 EXAMPLES
+
+=head2 Scaling the output
+
+This example shows how to scale the output image using Cairo commands.
+
+[% INCLUDE "scale.pl" | xtidy %]
+
+=begin html 
+
+<p>
+The default size looks like this:
+</p>
+<img width="36" height="36" src='https://fastapi.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/durn.png'>
+<p>
+The scaled image looks like this:
+</p>
+<img width="200" height="200" src='https://fastapi.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/urn.png'>
+
+=end html
+
+(This example is included as
+L<F<scale.pl>|https://fastapi.metacpan.org/source/BKB/Image-CairoSVG-[%
+version %]/examples/scale.pl> in the distribution. The original image
+is part of the L<Twitter Emoji
+collection|https://twemoji.twitter.com/>, 1f3fa.svg, representing
+U+1F3FA AMPHORA, used under L<CC-BY
+4.0|https://creativecommons.org/licenses/by/4.0/>)
+
+
 =head1 DRAWING METHODS
 
 All of these methods take the attributes of the specific element after
@@ -156,21 +186,14 @@ Cairo is used for rendering the image.
 
 Carp is used for reporting errors.
 
-=item L<ExtUtils::ParseXS::Utilities>
-
-This is used for trimming whitespace.
-
-=item L<Graphics::ColorNames::WWW>
-
-This is used for named colours.
-
 =item L<Image::SVG::Path>
 
 Image::SVG::Path is used for parsing the "path" information of the SVG.
 
 =item L<Math::Trig>
 
-Used for the value of C<pi>.
+Used for the value of C<pi> and various functions related to drawing
+arcs.
 
 =item L<XML::Parser>
 
@@ -184,7 +207,9 @@ XML::Parser is used for parsing SVG files.
 
 The demonstration website
 L<https://benkasminbullock.github.io/supertinyiconscairosvg/> shows
-the output of Image::CairoSVG on the Super Tiny Icons collection.
+the output of Image::CairoSVG on the Super Tiny Icons collection and
+the L<Twitter Emoji
+Collection|https://benkasminbullock.github.io/supertinyiconscairosvg/twemoji/>.
 
 =head2 Other software
 
@@ -242,6 +267,12 @@ L<https://rt.cpan.org/Ticket/Display.html?id=136405>.
 
 L<SVG - Scalable Vector Graphics with Perl|http://perlmaven.com/scalable-vector-graphics-with-perl> - article at Perl Maven
 
+=item Perl Cairo tutorial
+
+This L<Perl Cairo
+tutorial|https://www.lemoda.net/cairo/cairo-tutorial/index.html> may
+be useful if you need to go beyond defaults.
+
 =back
 
 
@@ -251,7 +282,8 @@ L<SVG - Scalable Vector Graphics with Perl|http://perlmaven.com/scalable-vector-
 
 =item Clip paths
 
-Does not support clip paths
+Does not support clip paths (clipping the output image to a given
+path).
 
 =item Copied paths
 
@@ -259,7 +291,9 @@ Does not support xlink:href (copied paths).
 
 =item Elliptical arcs
 
-Elliptical arcs are not handled correctly.
+Elliptical arcs are not handled correctly. There are no primitives in
+Cairo for these shapes so they will need to be implemented via Cairo
+transforms.
 
 =item Gradients
 
@@ -267,12 +301,13 @@ Gradients are not supported.
 
 =item Groups
 
-Groups are not supported.
+Groups are not supported, although inherited fill/stroke and other
+attributes are supported.
 
 =item Inherited fill / stroke values
 
-The handling of fill and stroke inherited from parent elements is
-patchy.
+The handling of fill and stroke inherited from parent elements may be
+somewhat patchy.
 
 =item Opacity
 
@@ -284,7 +319,16 @@ stroke-dasharray is not supported.
 
 =item Transforms
 
-Transforms are not handled.
+Transforms are not handled. Cairo does have facilities to do
+transforms so implementing them should not be too difficult.
+
+=item Units
+
+Units have been added haphazardly as they have been found in actual
+SVG documents. Although pixel units seem easy enough to understand,
+we're not exactly sure what the correct treatment of units such as
+millimetres or percents should be, so there is some guesswork at the
+moment.
 
 =back
 
