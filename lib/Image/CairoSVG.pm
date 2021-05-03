@@ -121,7 +121,8 @@ sub _render
 {
     my ($self, $element, $pattr) = @_;
     my $tag = $element->{tag};
-    if ($tag eq 'defs') {
+    if ($tag eq 'defs' || $tag eq 'title') {
+	# Put the title into the output PNG as text, etc.
 	return;
     }
     my $attr = $self->_draw ($element, $pattr);
@@ -213,10 +214,12 @@ sub _draw
 	}
     }
 
+    my $nodraw;
+
     $self->do_svg_attr (%attr);
     if ($tag eq 'svg' || $tag eq 'g') {
 	# These are non-rendering, i.e. don't result in visual output.
-	;
+	$nodraw = 1;
     }
     elsif ($tag eq 'path') {
 	$self->path (%attr);
@@ -255,9 +258,12 @@ sub _draw
 	    # not up to spec, so only complain if the user wants
 	    # "verbose" messages.
 	    carp "Unable to draw SVG element '<$tag>'";
+	    $nodraw = 1;
 	}
     }
-    $self->do_fill_stroke (\%attr);
+    if (! $nodraw) {
+	$self->do_fill_stroke (\%attr);
+    }
     return \%attr;
 }
 
@@ -295,13 +301,15 @@ sub svg
     my $min_y;
     my $width;
     my $height;
+    my $x_scale;
+    my $y_scale;
     if ($attr{width}) {
 	$width = $attr{width};
-	$width = svg_units ($width);
+	($width, $x_scale) = svg_units_scale ($width);
     }
     if ($attr{height}) {
 	$height = $attr{height};
-	$height = svg_units ($height);
+	($height, $y_scale) = svg_units_scale ($height);
     }
 
     # Use viewBox attribute
@@ -338,9 +346,13 @@ sub svg
 	$self->{surface} = $surface;
 	$self->make_cr ();
     }
-    if (defined $min_x && defined $min_y && ($min_x != 0 || $min_y != 0)) {
 	my $cr = $self->{cr};
+    if (defined $min_x && defined $min_y && ($min_x != 0 || $min_y != 0)) {
 	$cr->translate (-$min_x, -$min_y);
+    }
+    if ($x_scale != 1 || $y_scale != 1) {
+	$self->msg ("Scaling to $x_scale / $y_scale");
+	$cr->scale ($x_scale, $y_scale);
     }
 
     my $svg = {
@@ -860,10 +872,38 @@ sub line
 }
 
 my %units = (
-    # Arbitrary hack
-    mm => 4,
+    # https://www.w3.org/TR/css3-values/#absolute-lengths
+
+    # 96 pixels per inch divided by 25.4 millimetres per inch gives
+    # pixels / mm. This is the way an SVG made by Inkscape will be
+    # dimensioned in a web browser.
+
+    mm => 96/25.4,
+    in => 96,
     px => 1,
 );
+
+sub svg_units_scale
+{
+    my ($thing) = @_;
+    if (! defined $thing) {
+	return (0, 1);
+    }
+    if ($thing eq '') {
+	return (0, 1);
+    }
+    if (looks_like_number ($thing)) {
+	return ($thing, 1);
+    }
+    if ($thing =~ /([0-9\.]+)(\w+)/) {
+	my $number = $1;
+	my $unit = $2;
+	my $u = $units{$unit};
+	if ($u) {
+	    return ($number * $u, $u);
+	}
+    }
+}
 
 sub svg_units
 {
@@ -935,6 +975,18 @@ sub do_svg_attr
     if ($transform) {
 	$cr->save ();
 	$self->do_transforms (%attr);
+    }
+    my $fill_rule = $attr{'fill-rule'};
+    if ($fill_rule) {
+	if ($fill_rule eq 'nonzero') {
+	    $cr->set_fill_rule ('winding');
+	}
+	elsif ($fill_rule eq 'evenodd') {
+	    $cr->set_fill_rule ('even-odd');
+	}
+	else {
+	    carp "Unhandled value '$fill_rule' for 'fill-rule' attribute";
+	}
     }
 }
 

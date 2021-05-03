@@ -1,6 +1,7 @@
 #!/home/ben/software/install/bin/perl
 use warnings;
 use strict;
+use lib '/home/ben/projects/image-cairosvg/lib';
 use Image::CairoSVG;
 use Getopt::Long;
 

@@ -304,12 +304,8 @@ be useful if you need to go beyond defaults.
 
 =item Clip paths
 
-Does not support clip paths (clipping the output image to a given
-path).
-
-=item Copied paths
-
-Does not support xlink:href (copied paths).
+Clip paths (clipping the output image to a given path) are not
+supported.
 
 =item Elliptical arcs
 
@@ -317,31 +313,25 @@ Elliptical arcs are not handled correctly. There are no primitives in
 Cairo for these shapes so they will need to be implemented via Cairo
 transforms.
 
-=item fill-rule
-
-The C<fill-rule> attribute is not supported.
-
 =item Gradients
 
 Gradients are not supported.
 
-=item Groups
-
-Groups are not supported, although inherited fill/stroke and other
-attributes are supported.
-
-=item Inherited fill / stroke values
-
-The handling of fill and stroke inherited from parent elements may be
-somewhat patchy.
+There is L<support in
+Cairo|https://www.cairographics.org/samples/gradient/> so it should be
+possible to add them.
 
 =item stroke-dasharray
 
 stroke-dasharray is not supported.
 
+=item Text
+
+Text rendering is not supported at all.
+
 =item Transforms
 
-Some transforms are not handled.
+Some transforms (matrix, skew) are not handled.
 
 =item Units
 
