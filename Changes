@@ -1,9 +1,9 @@
 Revision log for Perl module "Image::CairoSVG"
 
-0.16 2021-05-02
+0.16 2021-05-03
 
 - Support opacity
-- Partially support transform
+- Partially support transform (scale, rotate, translate, matrix all OK)
 
 0.15 2021-05-02
 

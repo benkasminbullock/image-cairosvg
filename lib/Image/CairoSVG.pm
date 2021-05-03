@@ -6,17 +6,21 @@ use utf8;
 our $VERSION = '0.16';
 
 # Core modules
-use Carp qw/carp croak/;
+use Carp qw/carp croak confess/;
 use Math::Trig qw!acos pi rad2deg deg2rad!;
 use Scalar::Util 'looks_like_number';
 
-# Installed modules
+# Modules the user needs to install
+
 use XML::Parser;
 use Cairo;
 use Image::SVG::Path qw/extract_path_info/;
 
 our $default_surface_type = 'argb32';
 our $default_surface_size = 100;
+
+# This is what the SVG standard says the default colour is.
+
 our @defaultrgb = (0, 0, 0);
 
 sub new
@@ -106,7 +110,90 @@ sub render
 	}
 	$p->parsefile ($file);
     }
+    $self->_render ($self->{top});
     return $self->{surface};
+}
+
+# Actually render
+
+sub _render
+{
+    my ($self, $element) = @_;
+    $self->_draw ($element);
+    my $child = $element->{child};
+    for (@$child) {
+	$self->_render ($_);
+    }
+}
+
+sub processUse
+{
+    my ($self, %attr) = @_;
+    my $id = $attr{'xlink:href'};
+    if (! $id) {
+	$id = $attr{href};
+    }
+    if (! $id) {
+	carp "No xlink:href/href in <use>";
+	return;
+    }
+    $id =~ s/^#//;
+    my $element = $self->get_id ($id);
+    if (! $element) {
+	carp "ID $id in use not found";
+	return;
+    }
+    $self->_render ($element);
+}
+
+sub _draw
+{
+    my ($self, $element) = @_;
+    my $tag = $element->{tag};
+    $self->msg ("Drawing $tag:");
+    my $attr = $element->{attr};
+    my %attr = %$attr;
+    $self->do_svg_attr (%attr);
+    if ($tag eq 'svg' || $tag eq 'g') {
+	;
+    }
+    elsif ($tag eq 'path') {
+	$self->path (%attr);
+    }
+    elsif ($tag eq 'polygon') {
+	$self->polygon (%attr);
+    }
+    elsif ($tag eq 'line') {
+	$self->line (%attr);
+    }
+    elsif ($tag eq 'circle') {
+	$self->circle (%attr);
+    }
+    elsif ($tag eq 'ellipse') {
+	$self->ellipse (%attr);
+    }
+    elsif ($tag eq 'rect') {
+	$self->rect (%attr);
+    }
+    elsif ($tag eq 'polyline') {
+	$self->polyline (%attr);
+    }
+    elsif ($tag eq 'use') {
+	$self->processUse (%attr);
+    }
+    else {
+	if ($self->{verbose}) {
+	    # There are probably many of these since this module is
+	    # not up to spec, so only complain if the user wants
+	    # "verbose" messages.
+	    carp "Unable to draw SVG element '<$tag>'";
+	}
+    }
+    $self->do_fill_stroke ($attr);
+    if ($attr->{transform}) {
+	my $cr = $self->{cr};
+	$cr->restore ();
+    }
 }
 
 sub handle_end
@@ -115,11 +202,7 @@ sub handle_end
     my ($self, $parser, undef) = @_;
     my $element = pop @{$self->{elements}};
     my $attr = $element->{attr};
-    $self->do_fill_stroke ($attr);
-    if ($attr->{transform}) {
-	my $cr = $self->{cr};
-	$cr->restore ();
-    }
+#    $self->do_fill_stroke ($attr);
 }
 
 # <svg> tag seen
@@ -127,6 +210,13 @@ sub handle_end
 sub svg
 {
     my ($self, %attr) = @_;
+
+    # Try to work out the height and width of the image. SVG is a very
+    # complicated format, so the height and width can be stored in
+    # multiple places.
+
+    my $min_x;
+    my $min_y;
     my $width;
     my $height;
     if ($attr{width}) {
@@ -137,20 +227,13 @@ sub svg
 	$height = $attr{height};
 	$height = svg_units ($height);
     }
-    if ($attr{fill}) {
-	$self->{fill} = $attr{fill};
-    }
-    if ($attr{stroke}) {
-	$self->{stroke} = $attr{stroke};
-    }
-
 
     # Use viewBox attribute
 
     if (! defined $width && ! defined $height) {
 	my $viewBox = $attr{viewBox} || $attr{viewbox};
 	if ($viewBox) {
-	    (undef, undef, $width, $height) = split /\s+/, $viewBox;
+	    ($min_x, $min_y, $width, $height) = split /\s+/, $viewBox;
 	}
     }
     my $surface = $self->{surface};
@@ -179,7 +262,65 @@ sub svg
 	$self->{surface} = $surface;
 	$self->make_cr ();
     }
-   $self->do_svg_attr (%attr);
+    if (defined $min_x && defined $min_y && ($min_x != 0 || $min_y != 0)) {
+	my $cr = $self->{cr};
+	$cr->translate (-$min_x, -$min_y);
+    }
+
+    my $svg = {
+	tag => 'svg',
+	attr => \%attr,
+	child => [],
+    };
+
+    # Store of ids of elements within the tree
+    $self->{ids} = {};
+    # Currently open tags (misnamed)
+    $self->{elements} = [$svg];
+    $self->{top} = $svg;
+
+#    $self->do_svg_attr (%attr);
+}
+
+sub add_element
+{
+    my ($self, $tag, $attr) = @_;
+    my $element = {
+	tag => $tag,
+	attr => $attr,
+	child => [],
+    };
+    my $top = $self->{elements}[-1];
+    if (! $top) {
+	die "Empty stack";
+    }
+    push @{$top->{child}}, $element;
+    $element->{parent} = $top;
+    push @{$self->{elements}}, $element;
+    return $element;
+}
+
+# Store an ID
+
+sub store_id
+{
+    my ($self, $element, $id) = @_;
+    my $already = $self->{ids}{$id};
+    if ($already) {
+	carp "Duplicate id '$id' on element '<$already->{tag}>'";
+	return;
+    }
+    $self->{ids}{$id} = $element;
+}
+
+sub get_id
+{
+    my ($self, $id) = @_;
+    my $already = $self->{ids}{$id};
+    if ($already) {
+	return $already;
+    }
+    return undef;
 }
 
 # Start tag handler for the XML parser. This is private.
@@ -213,50 +354,16 @@ sub handle_start
 	}
     }
 
-    my $element = {
-	tag => $tag,
-	attr => \%attr,
-    };
-    push @{$self->{elements}}, $element;
-
     if ($tag eq 'svg') {
 	$self->svg (%attr);
     }
-    elsif ($tag eq 'path') {
-	$self->path (%attr);
-    }
-    elsif ($tag eq 'polygon') {
-	$self->polygon (%attr);
-    }
-    elsif ($tag eq 'line') {
-	$self->line (%attr);
-    }
-    elsif ($tag eq 'circle') {
-	$self->circle (%attr);
-    }
-    elsif ($tag eq 'ellipse') {
-	$self->ellipse (%attr);
-    }
-    elsif ($tag eq 'rect') {
-	$self->rect (%attr);
-    }
-    elsif ($tag eq 'title') {
-	;
-    }
-    elsif ($tag eq 'g') {
-	$self->g (%attr);
-    }
-    elsif ($tag eq 'polyline') {
-	$self->polyline (%attr);
-    }
     else {
-	if ($self->{verbose}) {
-	    # There are probably many of these since this module is
-	    # not up to spec, so only complain if the user wants
-	    # "verbose" messages.
-	    carp "Unhandled SVG tag '$tag'";
-	}
+    my $element = $self->add_element ($tag, \%attr);
+    # I don't think svgs ids need to be stored here.
+    if ($attr{id}) {
+	$self->store_id ($element, $attr{id});
     }
+}
 
     # http://www.princexml.com/doc/7.1/svg/
     # g, rect, circle, ellipse, line, path, text, tspan
@@ -291,10 +398,10 @@ sub rounded_rectangle
 	    $rx = svg_units ($attr{rx});
 	}
     }
-#    my $ry;
-#    if ($attr{ry}) {
-#	$ry = svg_units ($attr{ry});
-#    }
+    #    my $ry;
+    #    if ($attr{ry}) {
+    #	$ry = svg_units ($attr{ry});
+    #    }
     $cr->new_sub_path ();
     $cr->arc ($x + $width - $rx, $y +           $rx, $rx, -pi/2,      0);
     $cr->arc ($x + $width - $rx, $y + $height - $rx, $rx,     0,   pi/2);
@@ -447,19 +554,28 @@ sub path
 	if ($key eq lc $key) {
 	    # This is a bug, "extract_path_info" above should never
 	    # return a lower-case key, which means a relative path.
-	    die "Path parse conversion to absolute failed";
+	    confess "Path parse conversion to absolute failed";
 	}
 
 	if ($key eq 'S') {
 	    # This is a bug, "extract_path_info" above should never
 	    # return a shortcut key, they should have been converted
 	    # to C keys.
-	    die "Path parse conversion to no shortcuts failed";
+	    confess "Path parse conversion to no shortcuts failed";
 	}
 	if ($key eq 'M') {
 	    # Move to
 	    $cr->new_sub_path ();
 	    $cr->move_to (@{$element->{point}});
+
+	    # This is debugging code from the changeover to two-stage
+	    # rendering.
+
+	    # $self->msg ("Move to @{$element->{point}}");
+	    # print $cr->status (), "\n";
+	    # my @p1 = $cr->get_current_point ();
+	    # $self->msg ("Move to @p1");
+
 	}
 	elsif ($key eq 'L') {
 	    $cr->line_to (@{$element->{point}});
@@ -679,7 +795,7 @@ sub quadbez
     if (! $cr->has_current_point ()) {
 	# This indicates a bug has happened, because there is always a
 	# current point when rendering an SVG path.
-	die "Invalid drawing of quadratic bezier without a current point";
+	confess "Invalid drawing of quadratic bezier without a current point";
     }
 
     my @p1 = $cr->get_current_point ();
@@ -789,8 +905,11 @@ sub do_svg_attr
     }
 }
 
-# SVG accepts things like -30-40 as two numbers in transform
-# arguments.
+# The reason this is as complicated as it is is because SVG accepts
+# not only commas and/or spaces as separators, but also things like
+# -30-40 as two numbers in transform arguments. Did this
+# "optimization" by SVG designers really do anything useful?
+
 my $sep = qr!(?:\s+|\s*,\s*)!;
 my $num = qr![-0-9\.]+!;
 my $sepnum = qr!(?:$sep$num|$sep?-$num)!;
@@ -842,11 +961,11 @@ sub do_transforms
 	    $trans = 1;
 	}
 	if ($trans) {
-	    $cr->translate (-$x, -$y)
+	    $cr->translate ($x, $y)
 	}
 	$cr->rotate (deg2rad ($angle));
 	if ($trans) {
-	    $cr->translate ($x, $y)
+	    $cr->translate (-$x, -$y)
 	}
 	if ($trans) {
 	    $self->msg ("rotate $angle $x $y");
@@ -911,6 +1030,7 @@ sub do_fill_stroke
     }
     elsif ($stroke && $stroke ne 'none') {
 	$self->set_colour ($stroke, $stroke_opacity);
+	$self->msg ("Stroking with $stroke");
 	$cr->stroke ();
     }
     elsif (! $fill && ! $stroke) {
@@ -922,9 +1042,9 @@ sub do_fill_stroke
 }
 
 # Graphics::ColorNames::WWW for some reason returns these as integers
-# with the R, G, and B components multiplied together, so to use that
-# module we would need to then divide the numbers to get the R, G and
-# B values back. It was easier just to copy and paste.
+# with the R, G, and B components multiplied by factors of 256, so to
+# use that module we would need to then divide the numbers to get the
+# R, G and B values back. It was easier just to copy and paste.
 
 my %color2rgb = (
     'aliceblue'         => [240, 248, 255],
@@ -1110,13 +1230,11 @@ sub set_colour
 	@c = name2colour ($colour);
     }
     if (defined $opacity) {
-	# There ain't no sanity clause
 	if ($opacity > 1 || $opacity < 0) {
 	    carp "Opacity value $opacity out of bounds";
 	    $opacity = 1;
 	}
-	push @c, $opacity;
-	$cr->set_source_rgba (@c);
+	$cr->set_source_rgba (@c, $opacity);
     }
     else {
 	$cr->set_source_rgb (@c);
