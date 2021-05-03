@@ -6,7 +6,7 @@ use utf8;
 our $VERSION = '0.16';
 
 # Core modules
-use Carp qw/carp croak confess/;
+use Carp qw/carp croak confess cluck/;
 use Math::Trig qw!acos pi rad2deg deg2rad!;
 use Scalar::Util 'looks_like_number';
 
@@ -110,6 +110,7 @@ sub render
 	}
 	$p->parsefile ($file);
     }
+    $self->{depth} = 0;
     $self->_render ($self->{top});
     return $self->{surface};
 }
@@ -118,12 +119,19 @@ sub render
 
 sub _render
 {
-    my ($self, $element) = @_;
-    $self->_draw ($element);
+    my ($self, $element, $pattr) = @_;
+    my $tag = $element->{tag};
+    if ($tag eq 'defs') {
+	return;
+    }
+    my $attr = $self->_draw ($element, $pattr);
+    $self->{depth}++;
     my $child = $element->{child};
     for (@$child) {
-	$self->_render ($_);
+	$self->_render ($_, $attr);
     }
+    $self->{depth}--;
+    $self->_draw_end ($element);
 }
 
 sub processUse
@@ -143,18 +151,71 @@ sub processUse
 	carp "ID $id in use not found";
 	return;
     }
-    $self->_render ($element);
+    my $cr = $self->{cr};
+    my $x = $attr{x};
+    my $y = $attr{y};
+    if (defined $x || defined $y) {
+	if (! defined $x) {
+	    $x = 0;
+	}
+	if (! defined $y) {
+	    $y = 0;
+	}
+	$self->msg ("Moving to $x $y");
+	$cr->save ();
+	$cr->translate ($x, $y);
+    }
+
+    $self->_render ($element, \%attr);
+
+    if (defined $x || defined $y) {
+	$cr->restore ();
+    }
 }
 
 sub _draw
 {
-    my ($self, $element) = @_;
+    my ($self, $element, $pattr) = @_;
     my $tag = $element->{tag};
-    $self->msg ("Drawing $tag:");
+    $self->msg ("<$tag>");
     my $attr = $element->{attr};
+
+    # %attr is a holder for inherited attributes. The inherited
+    # attributes are not written into $element->{attr} since it's
+    # possible that a <use> element might re-use the element, but want
+    # to give it different inherited attributes, so %attr does the job
+    # of keeping the actual element attributes (the ones written in
+    # the SVG itself) separate from the inherited (implicit)
+    # attributes.
+
     my %attr = %$attr;
+
+    # This list of inherited things is guesswork so far, there is
+    # probably a list of what to copy somewhere but I haven't located
+    # it yet.
+
+    for my $key (qw!
+	fill
+	fill-opacity
+	fill-rule
+	opacity
+	stroke
+	stroke-dasharray
+	stroke-dashoffset
+	stroke-linecap
+	stroke-linejoin
+	stroke-miterlimit
+	stroke-opacity
+	stroke-width
+    !) {
+	if ($pattr->{$key} && ! $attr{$key}) {
+	    $attr{$key} = $pattr->{$key};
+	}
+    }
+
     $self->do_svg_attr (%attr);
     if ($tag eq 'svg' || $tag eq 'g') {
+	# These are non-rendering, i.e. don't result in visual output.
 	;
     }
     elsif ($tag eq 'path') {
@@ -181,6 +242,13 @@ sub _draw
     elsif ($tag eq 'use') {
 	$self->processUse (%attr);
     }
+    elsif ($tag eq 'defs') {
+	# Throw an exception. Arriving here is a bug, we should have
+	# stopped at _render. The <defs> element is processed and
+	# stored by the parser, but it is not used directly by the
+	# renderer. Its children are probably used by a <use> element.
+	confess "<defs> element reached";
+    }
     else {
 	if ($self->{verbose}) {
 	    # There are probably many of these since this module is
@@ -189,7 +257,18 @@ sub _draw
 	    carp "Unable to draw SVG element '<$tag>'";
 	}
     }
-    $self->do_fill_stroke ($attr);
+    $self->do_fill_stroke (\%attr);
+    return \%attr;
+}
+
+sub _draw_end
+{
+    my ($self, $element) = @_;
+    my $tag = $element->{tag};
+    $self->msg ("</$tag>");
+    # Only use the actual attributes, not the inherited ones, although
+    # the transform attribute is probably not inherited.
+    my $attr = $element->{attr};
     if ($attr->{transform}) {
 	my $cr = $self->{cr};
 	$cr->restore ();
@@ -202,10 +281,7 @@ sub handle_end
     my ($self, $parser, undef) = @_;
     my $element = pop @{$self->{elements}};
     my $attr = $element->{attr};
-#    $self->do_fill_stroke ($attr);
 }
-
-# <svg> tag seen
 
 sub svg
 {
@@ -278,8 +354,6 @@ sub svg
     # Currently open tags (misnamed)
     $self->{elements} = [$svg];
     $self->{top} = $svg;
-
-#    $self->do_svg_attr (%attr);
 }
 
 sub add_element
@@ -300,7 +374,7 @@ sub add_element
     return $element;
 }
 
-# Store an ID
+# Store an ID so it can be retrieved later.
 
 sub store_id
 {
@@ -312,6 +386,8 @@ sub store_id
     }
     $self->{ids}{$id} = $element;
 }
+
+# Retrieve an element by ID. This is used by <use>.
 
 sub get_id
 {
@@ -329,61 +405,25 @@ sub handle_start
 {
     my ($self, $parser, $tag, %attr) = @_;
 
-    my $parent = $self->{elements}[-1];
-    if ($parent) {
-	my $pattr = $parent->{attr};
-	for my $key (qw!
-	    fill
-	    fill-opacity
-	    fill-rule
-	    opacity
-	    stroke
-	    stroke-dasharray
-	    stroke-dashoffset
-	    stroke-linecap
-	    stroke-linejoin
-	    stroke-miterlimit
-	    stroke-opacity
-	    stroke-width
-	!) {
-	    # So where were the spiders
-	    # While the fly tried to break our balls
-	    if ($pattr->{$key} && ! $attr{$key}) {
-		$attr{$key} = $pattr->{$key};
-	    }
-	}
-    }
-
     if ($tag eq 'svg') {
 	$self->svg (%attr);
     }
     else {
-    my $element = $self->add_element ($tag, \%attr);
-    # I don't think svgs ids need to be stored here.
-    if ($attr{id}) {
-	$self->store_id ($element, $attr{id});
+	my $element = $self->add_element ($tag, \%attr);
+	# I don't think svgs ids need to be stored here.
+	if ($attr{id}) {
+	    $self->store_id ($element, $attr{id});
+	}
     }
 }
 
-    # http://www.princexml.com/doc/7.1/svg/
-    # g, rect, circle, ellipse, line, path, text, tspan
-    # Also "use" etc.
-}
-
-sub g
-{
-    my ($self, %attr) = @_;
-    $self->do_svg_attr (%attr);
-    # Group element
-}
-
-# Around the rugged rectangle the ragged rascals ran
+# Around the rugged rectangle the ragged rascals ran. "Polyfill" for
+# Cairo since it has no native rounded rectangles.
 
 sub rounded_rectangle
 {
     my ($self, %attr) = @_;
     my $cr = $self->{cr};
-    $self->do_svg_attr (%attr);
     # https://www.cairographics.org/samples/rounded_rectangle/
     my $x = svg_units ($attr{x});
     my $y = svg_units ($attr{y});
@@ -398,6 +438,7 @@ sub rounded_rectangle
 	    $rx = svg_units ($attr{rx});
 	}
     }
+    # This is a kludge/hack at the moment.
     #    my $ry;
     #    if ($attr{ry}) {
     #	$ry = svg_units ($attr{ry});
@@ -428,7 +469,6 @@ sub rect
 
     $cr->rectangle ($x, $y, $width, $height);
 
-    $self->do_svg_attr (%attr);
 }
 
 sub ellipse
@@ -454,7 +494,6 @@ sub ellipse
 
     $cr->restore ();
 
-    $self->do_svg_attr (%attr);
 }
 
 sub circle
@@ -470,8 +509,6 @@ sub circle
     # Render it.
 
     $cr->arc ($cx, $cy, $r, 0, 2*pi);
-
-    $self->do_svg_attr (%attr);
 }
 
 sub split_points
@@ -501,7 +538,6 @@ sub polygon
 	$cr->line_to ($x, $y);
     }
     $cr->close_path ();
-    $self->do_svg_attr (%attr);
 }
 
 sub polyline
@@ -522,7 +558,6 @@ sub polyline
 	$x = pop @points;
 	$cr->line_to ($x, $y);
     }
-    $self->do_svg_attr (%attr);
 }
 
 sub path
@@ -612,7 +647,6 @@ sub path
 	    carp "Unknown SVG path key '$key': ignoring";
 	}
     }
-    $self->do_svg_attr (%attr);
 }
 
 # This is a Perl translation of 
@@ -823,7 +857,6 @@ sub line
     my $cr = $self->{cr};
     $cr->move_to ($attr{x1}, $attr{y1});
     $cr->line_to ($attr{x2}, $attr{y2});
-    $self->do_svg_attr (%attr);
 }
 
 my %units = (
@@ -927,73 +960,86 @@ sub do_transforms
     my $cr = $self->{cr};
     # Transformers - robots in disguise
     my $transform = $attr{transform};
-    if ($transform =~ s/translate\s*\(\s*($num)($sepnum)\s*\)//) {
-	my $x = $1;
-	my $y = sepnum ($2);
-	$self->msg ("translate ($x, $y)");
-	$cr->translate ($x, $y);
+    while ($transform =~ /((?:translate|scale|rotate|matrix)\s*\([^\)]*\))/g) {
+	my $change = $1;
+	if ($change =~ /translate\s*\(\s*($num)($sepnum)\s*\)/) {
+	    my $x = $1;
+	    my $y = sepnum ($2);
+	    $self->msg ("translate ($x, $y)");
+	    $cr->translate ($x, $y);
+	    next;
+	}
+	if ($change =~ /scale\s*\(\s*($num)(?:$sep($num))?\s*\)/) {
+	    my $x = $1;
+	    my $y = $2;
+	    if (defined $y) {
+		$y = sepnum ($y);
+	    }
+	    else {
+		# scale may take one argument
+		$y = $x;
+	    }
+	    $self->msg ("scale ($x, $y)");
+	    $cr->scale ($x, $y);
+	    next;
+	}
+	if ($change =~ /
+	    rotate\s*\(
+	    \s*($num)\s*
+	    (?:($sepnum)($sepnum))?
+	    \s*\)/x) {
+	    my $angle = $1;
+	    my $x = $2;
+	    my $y = $3;
+	    my $trans;
+	    if (defined $x && defined $y) {
+		$x = sepnum ($x);
+		$y = sepnum ($y);
+		$trans = 1;
+	    }
+	    if ($trans) {
+		$cr->translate ($x, $y)
+	    }
+	    $cr->rotate (deg2rad ($angle));
+	    if ($trans) {
+		$cr->translate (-$x, -$y)
+	    }
+	    if ($trans) {
+		$self->msg ("rotate $angle around $x $y");
+	    }
+	    else {
+		$self->msg ("rotate $angle !");
+	    }
+	    next;
+	}
+	if ($change =~ m!
+	    matrix\s*
+	    \(\s*
+	    ($num)
+	    ($sepnum)
+	    ($sepnum)
+	    ($sepnum)
+	    ($sepnum)
+	    ($sepnum)
+	    \s*\)
+	    !x) {
+	    my @nums = ($1, $2, $3, $4, $5, $6);
+	    @nums = map {sepnum ($_)} @nums;
+	    $self->msg ("Matrix @nums");
+	    my $m = Cairo::Matrix->init (@nums);
+	    my $matrix = $cr->get_matrix ();
+	    $matrix = $matrix->multiply ($m);
+# I'm not yet sure how to implement the translate part.
+	    #$matrix =
+# $matrix->translate (-$nums[4]/2, $nums[5]);
+	    $cr->set_matrix ($matrix);
+	    next;
+	}
     }
-    if ($transform =~ s/scale\s*\(\s*($num)(?:$sep($num))?\s*\)//) {
-	my $x = $1;
-	my $y = $2;
-	if (defined $y) {
-	    $y = sepnum ($y);
-	}
-	else {
-	    # scale may take one argument
-	    $y = $x;
-	}
-	$self->msg ("scale ($x, $y)");
-	$cr->scale ($x, $y);
-    }
-    if ($transform =~ s/
-	rotate\s*\(
-	\s*($num)\s*
-	(?:($sepnum)($sepnum))?
-	\s*\)//x) {
-	my $angle = $1;
-	my $x = $2;
-	my $y = $3;
-	my $trans;
-	if (defined $x && defined $y) {
-	    $x = sepnum ($x);
-	    $y = sepnum ($y);
-	    $trans = 1;
-	}
-	if ($trans) {
-	    $cr->translate ($x, $y)
-	}
-	$cr->rotate (deg2rad ($angle));
-	if ($trans) {
-	    $cr->translate (-$x, -$y)
-	}
-	if ($trans) {
-	    $self->msg ("rotate $angle $x $y");
-	}
-	else {
-	    $self->msg ("rotate $angle");
-	}
-    }
-    if ($transform =~ s!
-	matrix\s*
-	\(\s*
-	($num)
-	($sepnum)
-	($sepnum)
-	($sepnum)
-	($sepnum)
-	($sepnum)
-	\s*\)
-    !!x) {
-	my @nums = ($1, $2, $3, $4, $5, $6);
-	@nums = map {sepnum ($_)} @nums;
-	my $matrix = Cairo::Matrix->init (@nums);
-	$cr->set_matrix ($matrix);
-    }
-    $transform = trim ($transform);
-    if ($transform) {
-	warn "Unhandled '$transform'";
-    }
+    # $transform = trim ($transform);
+    # if ($transform) {
+    # 	warn "Unhandled '$transform'";
+    # }
 }
 
 sub do_fill_stroke
@@ -1271,6 +1317,7 @@ sub msg
     if (! $self->{verbose}) {
 	return;
     }
+    print "  " x $self->{depth};
     print "$msg\n";
 }
 
