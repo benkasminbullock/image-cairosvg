@@ -350,7 +350,8 @@ sub svg
     if (defined $min_x && defined $min_y && ($min_x != 0 || $min_y != 0)) {
 	$cr->translate (-$min_x, -$min_y);
     }
-    if ($x_scale != 1 || $y_scale != 1) {
+    if (defined $x_scale && defined $y_scale &&
+	($x_scale != 1 || $y_scale != 1)) {
 	$self->msg ("Scaling to $x_scale / $y_scale");
 	$cr->scale ($x_scale, $y_scale);
     }

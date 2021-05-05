@@ -1,4 +1,16 @@
 [% start_year="2014" %]
+[% size = 250 %]
+[% site = "https://benkasminbullock.github.io/supertinyiconscairosvg/" %]
+[% edir = "https://fastapi.metacpan.org/source/BKB/Image-CairoSVG-" _
+ version _ "/examples" %]
+[% MACRO captions BLOCK %]
+<tr>
+<td>
+Input SVG
+<td>
+Output of Image::CairoSVG
+</tr>
+[% END # captions %]
 [% MACRO example(file) BLOCK %]
 [%- pl =  file _ ".pl" -%]
 [%- out = file _ "-out.txt" -%]
@@ -8,18 +20,43 @@ produces output
 
 [% INCLUDE $out | xtidy %]
 
-(This example is included as L<F<[% pl %]>|https://fastapi.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/[% pl %]> in the distribution.)
-[% END %]
+(This example is included as L<F<[% pl %]>|[% edir %]/[% pl %]> in the
+distribution.)  
+[% END # example %]
+[% MACRO bug(file) BLOCK %]
+
+=begin html
+
+<table>
+<tr>
+<td>
+<img height="[% size %]"
+     src="[% site %]/svg/[% file %].svg"
+     width="[% size %]">
+</td>
+
+<td>
+<img height="[% size %]"
+     src="[% site %]/png/[% file %].png"
+     width="[% size %]">
+</td>
+</tr>
+[% captions %]
+</table>
+
+=end html
+
+[% END # bug %]
 
 =encoding UTF-8
 
 =head1 NAME
 
-Image::CairoSVG - render SVG into a Cairo surface
+Image::CairoSVG - Render SVG into a Cairo surface
 
 =head1 SYNOPSIS
 
-This example converts an SVG into a PNG:
+This example converts an SVG file into PNG:
 
 [% INCLUDE "synopsis.pl" | xtidy %]
 
@@ -28,11 +65,16 @@ This example converts an SVG into a PNG:
 <p>
 This renders the following image:
 </p>
-<img width="451.271" height="187.542" src='https://fastapi.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/locust.png'>
+
+<img width="451.271" height="187.542"
+ src='[% edir %]/locust.png'>
 
 =end html
 
-(This example is included as L<F<synopsis.pl>|https://fastapi.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/synopsis.pl> in the distribution. The L<input|https://fastapi.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/locust.svg> and L<output files|https://fastapi.metacpan.org/source/BKB/Image-CairoSVG-[% version %]/examples/locust.png> are also included.)
+(This example is included as
+L<F<synopsis.pl>|[% edir %]/synopsis.pl> in the distribution. The
+L<input|[% edir %]/locust.svg> and L<output
+files|[% edir %]/locust.png> are also included.)
 
 =head1 VERSION
 
@@ -42,8 +84,9 @@ corresponding to git commit L<[% commit.commit %]|[% info.repo
 
 =head1 DESCRIPTION
 
-This module renders some kinds of SVG ("Scalable Vector Graphics")
-instructions into a Cairo surface.
+This module renders SVG ("Scalable Vector Graphics") instructions into
+a Cairo surface. The user can then choose what to do with the surface,
+for example write it out to a PNG file.
 
 =head1 METHODS
 
@@ -131,28 +174,37 @@ The scaled image looks like this:
 
 =end html
 
-(This example is included as
-L<F<scale.pl>|https://fastapi.metacpan.org/source/BKB/Image-CairoSVG-[%
-version %]/examples/scale.pl> in the distribution. The original image
-is part of the L<Twitter Emoji
-collection|https://twemoji.twitter.com/>, 1f3fa.svg, representing
-U+1F3FA AMPHORA, used under L<CC-BY
-4.0|https://creativecommons.org/licenses/by/4.0/>)
+(This example is included as L<F<scale.pl>|[% edir %]/scale.pl> in the
+distribution. The original image is part of the L<Twitter Emoji
+collection|https://twemoji.twitter.com/>, F<1f3fa.svg>, representing
+C<U+1F3FA AMPHORA>. This illustration is used under the terms of
+L<CC-BY 4.0|https://creativecommons.org/licenses/by/4.0/>)
 
 =head1 DRAWING METHODS
 
-All of these methods take the attributes of the specific element after
-which they're named. So, for example, if you have an SVG C<line>
-element, you can parse its attributes with an XML parser, then send
-the hash of key/value pairs in the attributes to L</line>.
+The drawing methods of the module are as follows.
+
+=head2 circle
+
+    $cairosvg->circle (%attr);
+
+Draw the circle specified by the SVG attributes in C<%attr> into the
+surface of C<$cairosvg>.
+
+=head2 ellipse
+
+    $cairosvg->ellipse (%attr);
+
+Draw the ellipse specified by the SVG attributes in C<%attr> into the
+surface of C<$cairosvg>.
 
 =head2 line
 
     $cairosvg->line (%attr);
 
-Render an SVG line onto the surface specified by C<$cairosvg>.  Given
-SVG input of the form C<< <line > >>, this renders it onto the Cairo
-surface.
+Render the line specified by the SVG attributes in C<%attr> into the
+surface specified by C<$cairosvg>.  Given SVG input of the form C<<
+<line > >>, this renders it onto the Cairo surface.
 
 =head2 path
 
@@ -160,35 +212,45 @@ surface.
 
 Given an SVG path element, send its attribute key / value pairs as
 C<%attr> to render into the Cairo surface of C<$cairosvg>. This uses
-L<Image::SVG::Path> to render the "d" attibute of the path. It also
-converts quadratic bezier curves into cubic bezier curves, since Cairo
-does not support quadratic bezier curves.
+L<Image::SVG::Path> to parse the "d" attibute of the path. 
 
-=head2 rect
-
-    $cairosvg->rect (%attr);
-
-=head2 ellipse
-
-    $cairosvg->ellipse (%attr);
-
-=head2 circle
-
-    $cairosvg->circle (%attr);
+This converts any quadratic bezier curves found in the path into cubic
+bezier curves, since Cairo does not support quadratic bezier curves.
 
 =head2 polygon
 
     $cairosvg->polygon (%attr);
 
-Draws a polygon based on the C<points> attribute, closing the path.
+Draw the polygon specified by the C<points> attribute of C<%attr>,
+closing the path.
 
 =head2 polyline
 
     $cairosvg->polyline (%attr);
 
-The same as L</polygon> except that it doesn't close the path.
+Similar to L</polygon> except that it doesn't close the path.
+
+=head2 processUse
+
+    $cairosvg->processUse (%attr);
+
+Process a <use> SVG element. It relies on C<$cairosvg> already having
+processed the XML file in order to find the used element.
+
+=head2 rect
+
+    $cairosvg->rect (%attr);
+
+Draw the rectangle specified by C<%attr> into the surface contained in
+C<$cairosvg>.
+
+If the rectangle has rounded corners (a non-zero C<rx> attribute), a
+shim function is used to draw the rectangle, since Cairo has no native
+support for rectangles with rounded corners.
 
 =head1 DEPENDENCIES
+
+This module depends on the following other modules.
 
 =over
 
@@ -202,12 +264,14 @@ Carp is used for reporting errors.
 
 =item L<Image::SVG::Path>
 
-Image::SVG::Path is used for parsing the "path" information of the SVG.
+Image::SVG::Path is used for parsing the "path" information of the
+SVG, see L</path>.
 
 =item L<Math::Trig>
 
-Used for the value of C<pi> and various functions related to drawing
-arcs.
+This is used for the value of C<pi>, and for various functions related
+to drawing arcs, and for converting angles between radians (used by
+Cairo) and degrees (used by SVG).
 
 =item L<XML::Parser>
 
@@ -219,11 +283,13 @@ XML::Parser is used for parsing SVG files.
 
 =head2 Demonstration website - Super Tiny Icons
 
-The demonstration website
-L<https://benkasminbullock.github.io/supertinyiconscairosvg/> shows
-the output of Image::CairoSVG on the Super Tiny Icons collection and
-the L<Twitter Emoji
+L<This demonstration
+website|https://benkasminbullock.github.io/supertinyiconscairosvg/>
+shows the output of Image::CairoSVG on the Super Tiny Icons collection
+and the L<Twitter Emoji
 Collection|https://benkasminbullock.github.io/supertinyiconscairosvg/twemoji/>.
+
+Please see L</BUGS> below for notable errors in the rendering.
 
 =head2 Other software
 
@@ -288,11 +354,13 @@ L<https://rt.cpan.org/Ticket/Display.html?id=136405>.
 
 =item Perl Maven article
 
-L<SVG - Scalable Vector Graphics with Perl|http://perlmaven.com/scalable-vector-graphics-with-perl> - article at Perl Maven
+L<SVG - Scalable Vector Graphics with
+Perl|http://perlmaven.com/scalable-vector-graphics-with-perl> -
+article at Perl Maven
 
 =item Perl Cairo tutorial
 
-This L<Perl Cairo
+The Cairo module is mostly undocumented. This L<Perl Cairo
 tutorial|https://www.lemoda.net/cairo/cairo-tutorial/index.html> may
 be useful if you need to go beyond defaults.
 
@@ -300,18 +368,31 @@ be useful if you need to go beyond defaults.
 
 =head1 BUGS
 
+Various parts of the SVG standard are not implemented, as follows.
+
+If viewing the HTML version of this page, the illustrations below each
+bug description demonstrate instances from the Super Tiny Icons
+collection where the bug causes a rendering problem. See
+L</"Demonstration website - Super Tiny Icons"> above.
+
 =over
 
 =item Clip paths
 
 Clip paths (clipping the output image to a given path) are not
-supported.
+supported. These are supported in Cairo so it should be possible to
+add them.
+
+[% bug("google_maps") %]
 
 =item Elliptical arcs
 
-Elliptical arcs are not handled correctly. There are no primitives in
-Cairo for these shapes so they will need to be implemented via Cairo
+Circular arcs are produced correctly but elliptical arcs in paths are
+not handled correctly. This is because there are no primitives in
+Cairo for these shapes, so they need to be implemented via Cairo
 transforms.
+
+[% bug("react") %]
 
 =item Gradients
 
@@ -321,9 +402,17 @@ There is L<support in
 Cairo|https://www.cairographics.org/samples/gradient/> so it should be
 possible to add them.
 
+[% bug("glitch") %]
+
+=item shadows
+
+Shadows are not supported.
+
 =item stroke-dasharray
 
 stroke-dasharray is not supported.
+
+[% bug("signal") %]
 
 =item Text
 
@@ -331,15 +420,18 @@ Text rendering is not supported at all.
 
 =item Transforms
 
-Some transforms (matrix, skew) are not handled.
+Some transforms (matrix, skew) are not handled. There is some support
+for matrix transformations but the matrix transformations in L<Cairo>
+are completely undocumented so it's based on guesswork and reading the
+Cairo source code. See
+L<https://rt.cpan.org/Ticket/Display.html?id=136410>.
+
+[% bug("raspberry_pi") %]
 
 =item Units
 
-Units have been added haphazardly as they have been found in actual
-SVG documents. Although pixel units seem easy enough to understand,
-we're not exactly sure what the correct treatment of units such as
-millimetres or percents should be, so there is some guesswork at the
-moment.
+Millimetre units are quite common in Inkscape output, so these are
+supported but not all other possible units are.
 
 =back
 
