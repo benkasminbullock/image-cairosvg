@@ -3,7 +3,7 @@ use warnings;
 use strict;
 use utf8;
 
-our $VERSION = '0.16';
+our $VERSION = '0.17';
 
 # Core modules
 use Carp qw/carp croak confess cluck/;
