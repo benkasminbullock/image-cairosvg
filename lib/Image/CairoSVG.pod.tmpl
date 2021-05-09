@@ -281,7 +281,7 @@ XML::Parser is used for parsing SVG files.
 
 =head1 SEE ALSO
 
-=head2 Demonstration website - Super Tiny Icons
+=head2 Demonstration website and blog articles
 
 L<This demonstration
 website|https://benkasminbullock.github.io/supertinyiconscairosvg/>
@@ -290,6 +290,24 @@ and the L<Twitter Emoji
 Collection|https://benkasminbullock.github.io/supertinyiconscairosvg/twemoji/>.
 
 Please see L</BUGS> below for notable errors in the rendering.
+
+=head3 Blog articles
+
+I've written some blog articles about extending the SVG support in
+this module.
+
+=over
+
+=item L<Trying to get SVG right|https://benbullock.substack.com/p/trying-to-get-svg-right>
+
+This was the first article, where I had discovered that the module's
+arc-drawing code and arc-parsing code was not working.
+
+=item L<Improvements to Image::CairoSVG|https://benbullock.substack.com/p/improvements-to-imagecairosvg>
+
+This illustrates some of the improvements made.
+
+=back
 
 =head2 Other software
 
@@ -431,7 +449,9 @@ L<https://rt.cpan.org/Ticket/Display.html?id=136410>.
 =item Units
 
 Millimetre units are quite common in Inkscape output, so these are
-supported but not all other possible units are.
+supported. Inches are also supported incidentally since in SVG
+millimetres are defined as 25.4 inches, and inches are defined by
+having 96 pixels per inch, but not all other possible units are.
 
 =back
 

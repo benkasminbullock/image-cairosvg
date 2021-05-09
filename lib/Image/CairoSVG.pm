@@ -252,6 +252,9 @@ sub _draw
 	# renderer. Its children are probably used by a <use> element.
 	confess "<defs> element reached";
     }
+    elsif ($tag eq 'linearGradient') {
+	$self->linearGradient (%attr);
+    }
     else {
 	if ($self->{verbose}) {
 	    # There are probably many of these since this module is
@@ -1093,6 +1096,11 @@ sub do_transforms
     # if ($transform) {
     # 	warn "Unhandled '$transform'";
     # }
+}
+
+sub linearGradient
+{
+    my ($self, %attr) = @_;
 }
 
 sub do_fill_stroke
