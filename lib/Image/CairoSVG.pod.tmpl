@@ -305,7 +305,9 @@ arc-drawing code and arc-parsing code was not working.
 
 =item L<Improvements to Image::CairoSVG|https://benbullock.substack.com/p/improvements-to-imagecairosvg>
 
-This illustrates some of the improvements made.
+This illustrates some of the improvements made up to version 0.16,
+such as addition of opacity, support for the <use> tag, and more
+correct drawing of circular arcs.
 
 =back
 
@@ -378,7 +380,7 @@ article at Perl Maven
 
 =item Perl Cairo tutorial
 
-The Cairo module is mostly undocumented. This L<Perl Cairo
+The Cairo CPAN module is mostly undocumented. This L<Perl Cairo
 tutorial|https://www.lemoda.net/cairo/cairo-tutorial/index.html> may
 be useful if you need to go beyond defaults.
 
@@ -435,16 +437,6 @@ stroke-dasharray is not supported.
 =item Text
 
 Text rendering is not supported at all.
-
-=item Transforms
-
-Some transforms (matrix, skew) are not handled. There is some support
-for matrix transformations but the matrix transformations in L<Cairo>
-are completely undocumented so it's based on guesswork and reading the
-Cairo source code. See
-L<https://rt.cpan.org/Ticket/Display.html?id=136410>.
-
-[% bug("raspberry_pi") %]
 
 =item Units
 

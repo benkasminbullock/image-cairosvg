@@ -3,11 +3,11 @@ use warnings;
 use strict;
 use utf8;
 
-our $VERSION = '0.17';
+our $VERSION = '0.18';
 
 # Core modules
-use Carp qw/carp croak confess cluck/;
-use Math::Trig qw!acos pi rad2deg deg2rad!;
+use Carp qw/carp croak confess/;
+use Math::Trig qw!acos pi rad2deg deg2rad tan!;
 use Scalar::Util 'looks_like_number';
 
 # Modules the user needs to install
@@ -22,6 +22,22 @@ our $default_surface_size = 100;
 # This is what the SVG standard says the default colour is.
 
 our @defaultrgb = (0, 0, 0);
+
+use constant {
+
+    # The Cairo default value for the miter limit is slightly different to
+    # the SVG default value, so this needs to be set initially to draw
+    # SVGs correctly.
+
+    # Cairo's default value is 10:
+    # https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-set-miter-limit
+
+    # SVG's default value is 4:
+    # https://www.w3.org/TR/SVG11/painting.html#StrokeMiterlimitProperty
+    # https://svgwg.org/svg2-draft/painting.html#StrokeMiterlimitProperty
+    SVG_MITERLIMIT => 4,
+};
+
 
 sub new
 {
@@ -78,6 +94,7 @@ sub make_cr
 	# We won't be able to do very much without a context.
 	croak "Cairo::Context->create failed";
     }
+#    $self->{cr}->set_miter_limit (SVG_MITERLIMIT);
 }
 
 sub render
@@ -887,6 +904,8 @@ my %units = (
     px => 1,
 );
 
+# Return units and a scale
+
 sub svg_units_scale
 {
     my ($thing) = @_;
@@ -906,8 +925,14 @@ sub svg_units_scale
 	if ($u) {
 	    return ($number * $u, $u);
 	}
+	carp "Unknown unit $unit";
+	return ($number, 1);
     }
+    carp "Failed to convert SVG units '$thing'";
+    return (undef, 1);
 }
+
+# This should be unified with svg_units_scale to prevent divergence.
 
 sub svg_units
 {
@@ -982,6 +1007,8 @@ sub do_svg_attr
     }
     my $fill_rule = $attr{'fill-rule'};
     if ($fill_rule) {
+	# Cairo supports the same two things as SVG, but with
+	# different names.
 	if ($fill_rule eq 'nonzero') {
 	    $cr->set_fill_rule ('winding');
 	}
@@ -991,6 +1018,10 @@ sub do_svg_attr
 	else {
 	    carp "Unhandled value '$fill_rule' for 'fill-rule' attribute";
 	}
+    }
+    my $miterlimit = $attr{'stroke-miterlimit'};
+    if (defined $miterlimit) {
+	$cr->set_miter_limit ($miterlimit);
     }
 }
 
@@ -1016,7 +1047,7 @@ sub do_transforms
     my $cr = $self->{cr};
     # Transformers - robots in disguise
     my $transform = $attr{transform};
-    while ($transform =~ /((?:translate|scale|rotate|matrix)\s*\([^\)]*\))/g) {
+    while ($transform =~ /((?:translate|scale|rotate|matrix|skewX|skewY)\s*\([^\)]*\))/g) {
 	my $change = $1;
 	if ($change =~ /translate\s*\(\s*($num)($sepnum)\s*\)/) {
 	    my $x = $1;
@@ -1043,7 +1074,8 @@ sub do_transforms
 	    rotate\s*\(
 	    \s*($num)\s*
 	    (?:($sepnum)($sepnum))?
-	    \s*\)/x) {
+	    \s*\)
+	/x) {
 	    my $angle = $1;
 	    my $x = $2;
 	    my $y = $3;
@@ -1069,6 +1101,28 @@ sub do_transforms
 	    next;
 	}
 	if ($change =~ m!
+	    skew([XY])\s*
+	    \(\s*
+	    ($num)
+	    \s*\)
+	!x) {
+	    my $xy = $1;
+	    my $angle = deg2rad ($2);
+	    my $t = tan ($angle);
+	    my @nums;
+	    if ($xy eq 'X') {
+		@nums = (1, 0, $t, 1, 0, 0);
+	    }
+	    elsif ($xy eq 'Y') {
+		@nums = (1, $t, 0, 1, 0, 0);
+	    }	
+	    else {
+		die "$xy should be either X or Y";
+	    }
+	    multiply ($cr, \@nums);
+	    next;
+	}
+	if ($change =~ m!
 	    matrix\s*
 	    \(\s*
 	    ($num)
@@ -1078,17 +1132,10 @@ sub do_transforms
 	    ($sepnum)
 	    ($sepnum)
 	    \s*\)
-	    !x) {
+	!x) {
 	    my @nums = ($1, $2, $3, $4, $5, $6);
 	    @nums = map {sepnum ($_)} @nums;
-	    $self->msg ("Matrix @nums");
-	    my $m = Cairo::Matrix->init (@nums);
-	    my $matrix = $cr->get_matrix ();
-	    $matrix = $matrix->multiply ($m);
-# I'm not yet sure how to implement the translate part.
-	    #$matrix =
-# $matrix->translate (-$nums[4]/2, $nums[5]);
-	    $cr->set_matrix ($matrix);
+	    multiply ($cr, \@nums);
 	    next;
 	}
     }
@@ -1096,6 +1143,15 @@ sub do_transforms
     # if ($transform) {
     # 	warn "Unhandled '$transform'";
     # }
+}
+
+sub multiply
+{
+    my ($cr, $nums) = @_;
+    my $matrix = $cr->get_matrix ();
+    my $m = Cairo::Matrix->init (@$nums);
+    $matrix = $m->multiply ($matrix);
+    $cr->set_matrix ($matrix);
 }
 
 sub linearGradient
@@ -1109,10 +1165,13 @@ sub do_fill_stroke
     my $cr = $self->{cr};
     my $fill = $attr->{fill};
     my $stroke = $attr->{stroke};
-    # These can be undefined
+    # To save doing lots of checks here, the set_colour method is
+    # designed so that these opacity values can be undefined if they
+    # are not present in $attr.
     my $fill_opacity = $attr->{'fill-opacity'};
     my $stroke_opacity = $attr->{'stroke-opacity'};
     my $opacity = $attr->{opacity};
+    # I haven't checked whether this is the correct priority.
     if (defined $opacity && ! defined $fill_opacity) {
 	$fill_opacity = $opacity;
     }
@@ -1122,6 +1181,9 @@ sub do_fill_stroke
 
     if ($fill && $fill ne 'none') {
 	if ($stroke && $stroke ne 'none') {
+	    # I haven't checked whether it should be fill before
+	    # stroke, but the results of doing it this way look right,
+	    # so presumably this is what the standard says to do.
 	    $self->set_colour ($fill, $fill_opacity);
 	    $cr->fill_preserve ();
 	    $self->msg ("Filling with $fill");
@@ -1142,7 +1204,7 @@ sub do_fill_stroke
     }
     elsif (! $fill && ! $stroke) {
 	$self->msg ("Filling with black");
-	# Fill with black seems to be the default.
+	# Filling with black is the default action.
 	$self->set_colour ('#000000', $fill_opacity);
 	$cr->fill ();
     }

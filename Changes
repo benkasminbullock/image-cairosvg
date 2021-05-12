@@ -1,8 +1,14 @@
 Revision log for Perl module "Image::CairoSVG"
 
+0.18 2021-05-12
+
+- Handle matrix, skewX, skewY transforms
+- Use the SVG default value of the miter limit
+
 0.17 2021-05-09
 
-- Documentation changes only
+- Documentation
+- More accurate handling of units
 
 0.16 2021-05-03
 
