@@ -1,5 +1,9 @@
 Revision log for Perl module "Image::CairoSVG"
 
+0.19 2021-05-13
+
+- Implement clipping
+
 0.18 2021-05-12
 
 - Handle matrix, skewX, skewY transforms
