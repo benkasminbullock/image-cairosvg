@@ -36,6 +36,8 @@ use constant {
     # https://www.w3.org/TR/SVG11/painting.html#StrokeMiterlimitProperty
     # https://svgwg.org/svg2-draft/painting.html#StrokeMiterlimitProperty
     SVG_MITERLIMIT => 4,
+    true => 1,
+    false => 0,
 };
 
 
@@ -132,13 +134,21 @@ sub render
     return $self->{surface};
 }
 
+# These elements are not rendered.
+
+my %no_render = (
+    clipPath => true,
+    defs => true,
+    title => true,
+);
+
 # Actually render
 
 sub _render
 {
     my ($self, $element, $pattr) = @_;
     my $tag = $element->{tag};
-    if ($tag eq 'defs' || $tag eq 'title') {
+    if ($no_render{$tag}) {
 	# Put the title into the output PNG as text, etc.
 	return;
     }
@@ -152,18 +162,25 @@ sub _render
     $self->_draw_end ($element);
 }
 
-sub processUse
+sub x_id
 {
-    my ($self, %attr) = @_;
+    my (%attr) = @_;
     my $id = $attr{'xlink:href'};
     if (! $id) {
 	$id = $attr{href};
     }
     if (! $id) {
-	carp "No xlink:href/href in <use>";
-	return;
+	carp "No xlink:href/href found";
+	return undef;
     }
     $id =~ s/^#//;
+    return $id;
+}
+
+sub processUse
+{
+    my ($self, %attr) = @_;
+    my $id = x_id (%attr);
     my $element = $self->get_id ($id);
     if (! $element) {
 	carp "ID $id in use not found";
@@ -231,12 +248,17 @@ sub _draw
 	}
     }
 
+    # If true, do not draw (fill or stroke) the current object.
     my $nodraw;
 
+    if ($self->{_clipping}) {
+	$self->msg ("_clipping, not rendering");
+	$nodraw = true;
+    }
     $self->do_svg_attr (%attr);
     if ($tag eq 'svg' || $tag eq 'g') {
 	# These are non-rendering, i.e. don't result in visual output.
-	$nodraw = 1;
+	$nodraw = true;
     }
     elsif ($tag eq 'path') {
 	$self->path (%attr);
@@ -269,6 +291,9 @@ sub _draw
 	# renderer. Its children are probably used by a <use> element.
 	confess "<defs> element reached";
     }
+    elsif ($tag eq 'clipPath') {
+	confess "<clipPath> element reached";
+    }
     elsif ($tag eq 'linearGradient') {
 	$self->linearGradient (%attr);
     }
@@ -277,7 +302,7 @@ sub _draw
 	    # There are probably many of these since this module is
 	    # not up to spec, so only complain if the user wants
 	    # "verbose" messages.
-	    carp "Unable to draw SVG element '<$tag>'";
+	    $self->msg ("Unable to draw SVG element '<$tag>'");
 	    $nodraw = 1;
 	}
     }
@@ -285,6 +310,34 @@ sub _draw
 	$self->do_fill_stroke (\%attr);
     }
     return \%attr;
+}
+
+sub do_clip_path
+{
+    my ($self, $id) = @_;
+    $id =~ s!url\(#(.*?)\)!$1!;
+    my $element = $self->get_id ($id);
+    if (! $element) {
+	carp "ID $id in clip-path not found";
+	return;
+    }
+    my $tag = $element->{tag};
+    if ($tag ne 'clipPath') {
+	carp "Cannot clip to non-clipPath '$tag'";
+	return;
+    }
+    $self->msg ("Clipping to $id");
+    $self->{_clipping} = true;
+    $self->{depth}++;
+    my $children = $element->{child};
+    for my $child (@$children) {
+	$self->_render ($child);
+    }
+    $self->{_clipping} = false;
+    $self->msg ("Finished clipping to $id");
+    $self->{depth}--;
+    my $cr = $self->{cr};
+    $cr->clip ();
 }
 
 sub _draw_end
@@ -298,6 +351,9 @@ sub _draw_end
     if ($attr->{transform}) {
 	my $cr = $self->{cr};
 	$cr->restore ();
+    }
+    if ($tag eq 'clipPath') {
+	$self->{clipPath} = false;
     }
 }
 
@@ -1022,6 +1078,10 @@ sub do_svg_attr
     my $miterlimit = $attr{'stroke-miterlimit'};
     if (defined $miterlimit) {
 	$cr->set_miter_limit ($miterlimit);
+    }
+    my $clip_path = $attr{'clip-path'};
+    if (defined $clip_path) {
+	$self->do_clip_path ($clip_path);
     }
 }
 
