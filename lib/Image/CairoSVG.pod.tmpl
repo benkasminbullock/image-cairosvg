@@ -323,9 +323,8 @@ This documents visually the rendering improvements between version
 =item CairoSVG
 
 L<CairoSVG|http://cairosvg.org/> is a Python SVG renderer in
-Cairo. Originally the elliptical arc drawing part of Image::CairoSVG
-was based on it, but this was replaced in version 0.14 of this module
-by code based on the W3 Consortium standards.
+Cairo. The elliptical arc drawing part of Image::CairoSVG is a
+translation of its code into Perl.
 
 =back
 
@@ -401,15 +400,6 @@ collection where the bug causes a rendering problem. See
 L</"Demonstration website and blog articles"> above.
 
 =over
-
-=item Elliptical arcs
-
-Circular arcs are produced correctly but elliptical arcs in paths are
-not handled correctly. This is because there are no primitives in
-Cairo for these shapes, so they need to be implemented via Cairo
-transforms.
-
-[% bug("react") %]
 
 =item Gradients
 

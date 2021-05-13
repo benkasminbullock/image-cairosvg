@@ -3,7 +3,7 @@ use warnings;
 use strict;
 use utf8;
 
-our $VERSION = '0.19';
+our $VERSION = '0.20';
 
 # Core modules
 use Carp qw/carp croak confess/;
@@ -96,7 +96,7 @@ sub make_cr
 	# We won't be able to do very much without a context.
 	croak "Cairo::Context->create failed";
     }
-#    $self->{cr}->set_miter_limit (SVG_MITERLIMIT);
+    $self->{cr}->set_miter_limit (SVG_MITERLIMIT);
 }
 
 sub render
@@ -351,9 +351,6 @@ sub _draw_end
     if ($attr->{transform}) {
 	my $cr = $self->{cr};
 	$cr->restore ();
-    }
-    if ($tag eq 'clipPath') {
-	$self->{clipPath} = false;
     }
 }
 
@@ -738,26 +735,16 @@ sub path
     }
 }
 
-# This is a Perl translation of 
-# https://www.w3.org/TR/SVG/implnote.html#ArcImplementationNotes
+# This is a Perl translation of the arc drawing code in
+# https://github.com/Kozea/CairoSVG/blob/master/cairosvg/path.py
 
 sub svg_arc
 {
     my ($self, $element) = @_;
     my $cr = $self->{cr};
-    # Radii
-    my $rx = $element->{rx};
-    my $ry = $element->{ry};
-    # End points
-    my $x2 = $element->{x};
-    my $y2 = $element->{y};
-
-    # rx=0 or ry=0 means straight line
-    if ($rx == 0 || $ry == 0) {
-	$self->msg ("Arc has a zero radius rx=$rx or ry=$ry, treating as straight line");
-	$cr->line_to ($x2, $y2);
-	return;
-    }
+    my ($x1, $y1) = $cr->get_current_point ();
+    my ($rx, $ry) = ($element->{rx}, $element->{ry});
+    my $rotation = deg2rad ($element->{x_axis_rotation});
     my $fa = $element->{large_arc_flag};
     my $fs = $element->{sweep_flag};
     if ($fa != 0 && $fa != 1) {
@@ -766,145 +753,59 @@ sub svg_arc
     if ($fs != 0 && $fs != 1) {
 	croak "sweep-flag must be either 0 or 1";
     }
-    $self->msg ("A: inputs: large-arc-flag: $fa, sweep-flag: $fs");
-    # Start points
-    my ($x1, $y1) = $cr->get_current_point ();
-    $self->msg ("A: inputs: arc start: ($x1, $y1)");
-    $self->msg ("A: inputs: arc end: ($x2, $y2)");
-    $self->msg ("A: inputs: radii: ($rx, $ry)");
-    my $phi = deg2rad ($element->{x_axis_rotation});
-    $self->msg ("A: inputs: φ = $phi radians");
-    my ($xd, $yd) = (($x1-$x2)/2, ($y1-$y2)/2);
-    #    $self->msg ("Midpoint of vector from end to start: ($xd, $yd)");
-    my $s = sin $phi;
-    my $c = cos $phi;
-    #    $self->msg ("sin φ = $s, cos φ = $c");
-    # Eq. 5.1
-    my ($x1d, $y1d) = ($xd * $c + $yd * $s, - $xd * $s + $yd * $c);
-    $self->msg ("Rotated midpoint: x1' = $x1d, y1' = $y1d");
-    my $factor;
-    my $lambda = ($x1d/$rx)**2 + ($y1d/$ry)**2;
-    if ($lambda > 1) {
-	$self->msg ("$lambda > 1, increasing radii");
-	my $sqrtlambda = sqrt ($lambda);
+    my $x3 = $element->{x};
+    my $y3 = $element->{y};
+    $x3 -= $x1;
+    $y3 -= $y1;
+    my $radii_ratio = $ry / $rx;
+    my ($xe, $ye) = rotate ($x3, $y3, -$rotation);
+    $ye /= $radii_ratio;
 
-	$rx *= $sqrtlambda;
-	$ry *= $sqrtlambda;
-	$factor = 0;
+    my $angle = point_angle (0, 0, $xe, $ye);
+
+    $xe = sqrt ($xe**2 + $ye**2);
+    $ye = 0;
+    my $xe2 = $xe / 2;
+    if ($rx < $xe2) {
+	$rx = $xe2;
     }
-    else {
-	my $den = ($rx * $y1d)**2 + ($ry * $x1d)**2;
-	my $num = ($rx * $ry)**2 - $den;
-	#    $self->msg ("den = $den, num = $num");
-	$factor = sqrt ($num / $den);
-    }
-    #    $self->msg ("factor = $factor");
-    my $sign = 1;
+    my $xc = $xe2;
+    my $yc = sqrt ($rx**2 - $xc**2);
     if ($fa == $fs) {
-	$sign = -1;
+	$yc = - $yc;
     }
-    $factor *= $sign;
-    my $cxd =   $factor * $rx * $y1d / $ry;
-    my $cyd = - $factor * $ry * $x1d / $rx;
-    #    $self->msg ("A: transformed centre: ($cxd, $cyd)");
-    # Eq 5.3
-    my $cx = ($c * $cxd - $s * $cyd) + ($x1 + $x2) / 2;
-    my $cy = ($s * $cxd + $c * $cyd) + ($y1 + $y2) / 2;
-    $self->msg (sprintf ("A: centre of ellipse: (%.2f, %.2f)", $cx, $cy));
-    my @vec1 = (1,0);
-    # Eq. 5.5
-    my $xv2 = ($x1d - $cxd)/$rx;
-    my $yv2 = ($y1d - $cyd)/$ry;
-    my @vec2 = ($xv2, $yv2);
-    my $theta1 = vangle (\@vec1, \@vec2);
-    my $theta1d = rad2deg ($theta1);
-    $self->msg (sprintf ("Start angle θ1 = %.2f (%.2f°)", $theta1, $theta1d));
-    # Eq. 5.6
-    my $xv3 = (-$x1d - $cxd)/$rx;
-    my $yv3 = (-$y1d - $cyd)/$ry;
-    my @vec3 = ($xv3, $yv3);
-    #    $self->msg ("vec2 = @vec2");
-    #    $self->msg ("vec3 = @vec3");
-    my $dt = vangle (\@vec2, \@vec3);
-    my $dtd = rad2deg ($dt);
-    $self->msg ("Swept angle initially: Δθ = $dt ($dtd)");
-    if ($fs == 0) {
-
-	# if fS = 0 and the right side of (eq. 5.6) is greater than 0,
-	# then subtract 360°, whereas if fS = 1 and the right side of
-	# (eq. 5.6) is less than 0, then add 360°. In all other cases
-	# leave it as is.
-
-	if ($dt > 0) {
-	    $dt -= 2*pi;
-	}
-    }
-    elsif ($fs == 1) {
-	if ($dt < 0) {
-	    $dt += 2*pi;
-	}
-    }
-    $dtd = rad2deg ($dt);
-    $self->msg (sprintf ("Swept angle Δθ = %.2f (%.2f°)", $dt, $dtd));
-
+    ($xe, $ye) = _rotate ($xe, 0, $angle);
+    ($xc, $yc) = _rotate ($xc, $yc, $angle);
+    my $angle1 = _point_angle ($xc, $yc, 0, 0);
+    my $angle2 = _point_angle ($xc, $yc, $xe, $ye);
+    $cr->save ();
+    $cr->translate ($x1, $y1);
+    $cr->rotate ($rotation);
+    $cr->scale (1, $radii_ratio);
     if ($fs) {
-	$cr->arc ($cx, $cy, $rx, $theta1, $theta1+$dt);
+	$cr->arc ($xc, $yc, $rx, $angle1, $angle2);
     }
     else {
-	$cr->arc_negative ($cx, $cy, $rx, $theta1, $theta1+$dt);
+	$cr->arc_negative ($xc, $yc, $rx, $angle1, $angle2);
     }
+    $cr->restore ();
+    
 }
 
-# Helper for svg_arc
-
-# Eq. 5.4 of
-# https://www.w3.org/TR/SVG/implnote.html#ArcImplementationNotes
-
-sub vangle
+sub _point_angle
 {
-    my ($u, $v) = @_;
-    my $ulen = vlen ($u);
-    my $vlen = vlen ($v);
-    my $sign;
-    my $vdot = vdot ($u, $v);
-    my $cross = vcross ($u, $v);
-    if ($cross == 0) {
-	if ($vdot < 0) {
-	    $sign = -1;
-	}
-	else {
-	    $sign = 1;
-	}
-    }
-    else {
-	$sign = $cross / abs ($cross);
-    }
-    my $value = $vdot / ($ulen * $vlen);
-    return $sign * acos ($value);
+    my ($cx, $cy, $px, $py) = @_;
+    return atan2 ($py - $cy, $px - $cx);
 }
 
-# Helper for vangle
-
-sub vdot
+sub _rotate
 {
-    my ($u, $v) = @_;
-    return $u->[0] * $v->[0] + $u->[1] * $v->[1];
-}
-
-# Helper for vangle
-
-sub vcross
-{
-    my ($u, $v) = @_;
-    return $u->[0] * $v->[1] - $u->[1] * $v->[0];
-}
-
-# Helper for vangle
-
-sub vlen
-{
-    my ($v) = @_;
-    return sqrt ($v->[0]**2 + $v->[1]**2);
+    my ($x, $y, $angle) = @_;
+    my $s = sin $angle;
+    my $c = cos $angle;
+    my $xr = $c * $x - $s * $y;
+    my $yr = $c * $y + $s * $x;
+    return ($xr, $yr);
 }
 
 # Quadratic bezier curve shim for Cairo
@@ -988,31 +889,10 @@ sub svg_units_scale
     return (undef, 1);
 }
 
-# This should be unified with svg_units_scale to prevent divergence.
-
 sub svg_units
 {
-    my ($thing) = @_;
-    if (! defined $thing) {
-	return 0;
-    }
-    if ($thing eq '') {
-	return 0;
-    }
-    if (looks_like_number ($thing)) {
-	return $thing;
-    }
-    if ($thing =~ /([0-9\.]+)(\w+)/) {
-	my $number = $1;
-	my $unit = $2;
-	my $u = $units{$unit};
-	if ($u) {
-	    return $number * $u;
-	}
-    }
-
-    carp "Failed to convert SVG units '$thing'";
-    return undef;
+    my ($value, undef) = svg_units_scale (@_);
+    return $value;
 }
 
 # We have a path in the cairo surface and now we have to do the SVG

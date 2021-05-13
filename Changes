@@ -1,5 +1,10 @@
 Revision log for Perl module "Image::CairoSVG"
 
+0.20 2021-05-13
+
+- Restore accidentally commented-out SVG miter limit
+- Elliptical arcs improved
+
 0.19 2021-05-13
 
 - Implement clipping
