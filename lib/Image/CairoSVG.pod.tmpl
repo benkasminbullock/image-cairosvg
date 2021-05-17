@@ -401,6 +401,14 @@ L</"Demonstration website and blog articles"> above.
 
 =over
 
+=item Default fill is incorrect in some cases
+
+Default fill is not handled correctly.
+
+[% bug("fritz") %]
+
+[% bug("php") %]
+
 =item Gradients
 
 Gradients are not supported.
@@ -409,28 +417,34 @@ There is L<support in
 Cairo|https://www.cairographics.org/samples/gradient/> so it should be
 possible to add them.
 
+[% bug("gandi") %]
+
 [% bug("glitch") %]
 
-=item shadows
+=item Shadows
 
 Shadows are not supported.
 
-=item stroke-dasharray
+[% bug("keepassdx") %]
 
-stroke-dasharray is not supported.
+=item Styles
 
-[% bug("signal") %]
+Styles are not supported very well.
+
+[% bug("tiktok") %]
 
 =item Text
 
-Text rendering is not supported at all.
+Text rendering is not supported.
+
+[% bug("calendar") %]
 
 =item Units
 
-Millimetre units are quite common in Inkscape output, so these are
-supported. Inches are also supported incidentally since in SVG
-millimetres are defined as 25.4 inches, and inches are defined by
-having 96 pixels per inch, but not all other possible units are.
+Currently only pixels, millimetres, and inches are supported. 
+
+The conversion ratios are one millimetre is 25.4 inches, and one
+inch is 96 pixels.
 
 =back
 

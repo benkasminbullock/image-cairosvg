@@ -3,7 +3,7 @@ use warnings;
 use strict;
 use utf8;
 
-our $VERSION = '0.20';
+our $VERSION = '0.21';
 
 # Core modules
 use Carp qw/carp croak confess/;
@@ -895,6 +895,8 @@ sub svg_units
     return $value;
 }
 
+my $fpnum = qr!-?(?:[0-9]*\.[0-9]+|0|[0-9]+)!;
+
 # We have a path in the cairo surface and now we have to do the SVG
 # instructions specified by "%attr".
 
@@ -962,6 +964,18 @@ sub do_svg_attr
     my $clip_path = $attr{'clip-path'};
     if (defined $clip_path) {
 	$self->do_clip_path ($clip_path);
+    }
+    my $stroke_dashoffset = $attr{'stroke-dashoffset'};
+    my $stroke_dasharray = $attr{'stroke-dasharray'};
+    if ($stroke_dasharray) {
+	my @sd;
+	while ($stroke_dasharray =~ /($fpnum)/g) {
+	    push @sd, $1;
+	}
+	if (! defined $stroke_dashoffset) {
+	    $stroke_dashoffset = 0;
+	}
+	$cr->set_dash ($stroke_dashoffset, @sd);
     }
 }
 
