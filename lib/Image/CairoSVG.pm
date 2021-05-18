@@ -139,6 +139,8 @@ sub render
 my %no_render = (
     clipPath => true,
     defs => true,
+    linearGradient => true,
+    radialGradient => true,
     title => true,
 );
 
@@ -291,11 +293,8 @@ sub _draw
 	# renderer. Its children are probably used by a <use> element.
 	confess "<defs> element reached";
     }
-    elsif ($tag eq 'clipPath') {
-	confess "<clipPath> element reached";
-    }
-    elsif ($tag eq 'linearGradient') {
-	$self->linearGradient (%attr);
+    elsif ($no_render{$tag}) {
+	confess "<$tag> element reached";
     }
     else {
 	if ($self->{verbose}) {
@@ -419,7 +418,7 @@ sub svg
 	$self->{surface} = $surface;
 	$self->make_cr ();
     }
-	my $cr = $self->{cr};
+    my $cr = $self->{cr};
     if (defined $min_x && defined $min_y && ($min_x != 0 || $min_y != 0)) {
 	$cr->translate (-$min_x, -$min_y);
     }
@@ -1111,6 +1110,7 @@ sub multiply
 sub linearGradient
 {
     my ($self, %attr) = @_;
+
 }
 
 sub do_fill_stroke
@@ -1329,13 +1329,13 @@ sub name2colour
     return map {$_/256} @$c;
 }
 
-sub set_colour
+# Hex digit
+my $h = qr/[0-9a-f]/i;
+my $hh = qr/$h$h/;
+
+sub string_to_rgb
 {
-    my ($self, $colour, $opacity) = @_;
-    my $cr = $self->{cr};
-    # Hex digit
-    my $h = qr/[0-9a-f]/i;
-    my $hh = qr/$h$h/;
+    my ($colour) = @_;
     my @c = @defaultrgb;
     if ($colour eq 'black') {
 	@c = (0, 0, 0);
@@ -1352,6 +1352,20 @@ sub set_colour
     else {
 	@c = name2colour ($colour);
     }
+    return @c;
+}
+
+
+sub set_colour
+{
+    my ($self, $colour, $opacity) = @_;
+    my $cr = $self->{cr};
+    if ($colour =~ /^url\(#(.*?)\)/) {
+	my $gid = $1;
+	$self->use_gradient ($gid);
+	return;
+    }
+    my @c = string_to_rgb ($colour);
     if (defined $opacity) {
 	if ($opacity > 1 || $opacity < 0) {
 	    carp "Opacity value $opacity out of bounds";
@@ -1361,6 +1375,72 @@ sub set_colour
     }
     else {
 	$cr->set_source_rgb (@c);
+    }
+}
+
+my @linearDefaults = (
+    '0%',
+    '100%',
+    '0%',
+    '0%',
+);
+
+sub use_gradient
+{
+    my ($self, $gid) = @_;
+    my $element = $self->get_id ($gid);
+    if (! $element) {
+	carp "Could not find element with ID $gid";
+	return;
+    }
+    my $cr = $self->{cr};
+    my $tag = $element->{tag};
+    my $attr = $element->{attr};
+    my $children = $element->{child};
+    my $pat;
+    my ($x1, $y1, $x2, $y2) = $cr->fill_extents ();
+    if ($tag eq 'linearGradient') {
+	my @args = @linearDefaults;
+	my $i = 0;
+	for (qw!x1 y1 x2 y2!) {
+	    if ($attr->{$_}) {
+		$args[$i] = $attr->{$_};
+	    }
+	    $i++;
+	}
+	for (@args) {
+	    if ($_ =~ s/\%$//) {
+		$_ /= 100;
+	    }
+	}
+	my $xdiff = $x2 - $x1;
+	my $ydiff = $y2 - $y1;
+	$args[0] = $x1 + $args[0] * $xdiff;
+	$args[1] = $y1 + $args[1] * $ydiff;
+	$args[2] = $x1 + $args[2] * $xdiff;
+	$args[3] = $y1 + $args[3] * $ydiff;
+	print "@args\n";
+	$pat = Cairo::LinearGradient->create (@args);
+	for my $child (@$children) {
+	    my $cattr = $child->{attr};
+	    my $offset = $cattr->{offset};
+	    if ($offset =~ s/\%$//) {
+		$offset /= 100;
+	    }
+	    my $stop_colour = $cattr->{'stop-color'};
+	    my @rgb = string_to_rgb ($stop_colour);
+	    $pat->add_color_stop_rgb ($offset, @rgb);
+	}
+	$cr->set_source ($pat);
+	return;
+    }
+    elsif ($tag eq 'radialGradient') {
+	
+     	$pat = $cr->pattern_create_radial (@{$attr}{});
+    }
+    else {
+	carp "Don't know what to do with tag '$tag'";
+	return;
     }
 }
 
