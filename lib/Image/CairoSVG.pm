@@ -1336,6 +1336,9 @@ my $hh = qr/$h$h/;
 sub string_to_rgb
 {
     my ($colour) = @_;
+    if (! defined $colour) {
+	confess "No color";
+    }
     my @c = @defaultrgb;
     if ($colour eq 'black') {
 	@c = (0, 0, 0);
@@ -1385,6 +1388,15 @@ my @linearDefaults = (
     '0%',
 );
 
+my @radialDefaults = (
+    '50%',
+    '50%',
+    '0%',
+    '50%',
+    '50%',
+    '50%',
+);
+
 sub use_gradient
 {
     my ($self, $gid) = @_;
@@ -1398,6 +1410,11 @@ sub use_gradient
     my $attr = $element->{attr};
     my $children = $element->{child};
     my $pat;
+    my $noscale;
+    my $gradientUnits = $attr->{gradientUnits};
+    if (defined $gradientUnits && $gradientUnits eq 'userSpaceOnUse') {
+	$noscale = 1;
+    }
     my ($x1, $y1, $x2, $y2) = $cr->fill_extents ();
     if ($tag eq 'linearGradient') {
 	my @args = @linearDefaults;
@@ -1413,36 +1430,92 @@ sub use_gradient
 		$_ /= 100;
 	    }
 	}
-	my $xdiff = $x2 - $x1;
-	my $ydiff = $y2 - $y1;
-	$args[0] = $x1 + $args[0] * $xdiff;
-	$args[1] = $y1 + $args[1] * $ydiff;
-	$args[2] = $x1 + $args[2] * $xdiff;
-	$args[3] = $y1 + $args[3] * $ydiff;
-	print "@args\n";
-	$pat = Cairo::LinearGradient->create (@args);
-	for my $child (@$children) {
-	    my $cattr = $child->{attr};
-	    my $offset = $cattr->{offset};
-	    if ($offset =~ s/\%$//) {
-		$offset /= 100;
-	    }
-	    my $stop_colour = $cattr->{'stop-color'};
-	    my @rgb = string_to_rgb ($stop_colour);
-	    $pat->add_color_stop_rgb ($offset, @rgb);
+	if (! $noscale) {
+	    my $xdiff = $x2 - $x1;
+	    my $ydiff = $y2 - $y1;
+	    $args[0] = adjust ($args[0], $x1, $xdiff);
+	    $args[1] = adjust ($args[1], $y1, $ydiff);
+	    $args[2] = adjust ($args[2], $x1, $xdiff);
+	    $args[3] = adjust ($args[3], $y1, $ydiff);
 	}
+	$pat = Cairo::LinearGradient->create (@args);
+	read_stops ($children, $pat);
 	$cr->set_source ($pat);
 	return;
     }
     elsif ($tag eq 'radialGradient') {
-	
-     	$pat = $cr->pattern_create_radial (@{$attr}{});
+	my @args = @radialDefaults;
+	my $i = 0;
+	for (qw!fx fy fr cx cy r!) {
+	    if ($attr->{$_}) {
+		$args[$i] = $attr->{$_};
+	    }
+	    $i++;
+	}
+	for (@args) {
+	    if ($_ =~ s/\%$//) {
+		$_ /= 100;
+	    }
+	}
+	if (! $noscale) {
+	    my $xdiff = $x2 - $x1;
+	    my $ydiff = $y2 - $y1;
+	    my $rdiff = $xdiff;
+	    if ($rdiff > $ydiff) {
+		$rdiff = $ydiff;
+	    }
+	    $args[0] = adjust ($args[0], $x1, $xdiff);
+	    $args[1] = adjust ($args[1], $y1, $ydiff);
+	    $args[2] = adjust ($args[2], 0, $rdiff);
+	    $args[3] = adjust ($args[3], $x1, $xdiff);
+	    $args[4] = adjust ($args[4], $y1, $ydiff);
+	    $args[5] = adjust ($args[5], 0, $rdiff);
+	}
+	$pat = Cairo::RadialGradient->create (@args);
+	read_stops ($children, $pat);
+	$cr->set_source ($pat);
+	return;
     }
     else {
 	carp "Don't know what to do with tag '$tag'";
 	return;
     }
 }
+
+sub read_stops
+{
+    my ($children, $pat) = @_;
+    for my $child (@$children) {
+	my $cattr = $child->{attr};
+	my $offset = $cattr->{offset};
+	if (! defined $offset) {
+	    $offset = 0;
+	}
+	if ($offset =~ s/\%$//) {
+	    $offset /= 100;
+	}
+	my $stop_colour = $cattr->{'stop-color'};
+	my @rgb = @defaultrgb;
+	if (defined $stop_colour) {
+	    @rgb = string_to_rgb ($stop_colour);
+	}
+	my $stop_opacity = $cattr->{'stop-opacity'};
+	if (defined $stop_opacity) {
+	    $pat->add_color_stop_rgba ($offset, @rgb, $stop_opacity);
+	}
+	else {
+	    $pat->add_color_stop_rgb ($offset, @rgb);
+	}
+    }
+}
+
+sub adjust
+{
+    my ($value, $start, $diff) = @_;
+    $value = $start + $value * $diff;
+    return $value;
+}
+
 
 sub surface
 {
