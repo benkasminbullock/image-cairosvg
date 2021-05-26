@@ -874,14 +874,14 @@ sub svg_units_scale
     if (looks_like_number ($thing)) {
 	return ($thing, 1);
     }
-    if ($thing =~ /([0-9\.]+)(\w+)/) {
+    if ($thing =~ /([0-9\.]+)(\w+)$/) {
 	my $number = $1;
 	my $unit = $2;
 	my $u = $units{$unit};
 	if ($u) {
 	    return ($number * $u, $u);
 	}
-	carp "Unknown unit $unit";
+	carp "Unknown unit $unit in '$thing'";
 	return ($number, 1);
     }
     carp "Failed to convert SVG units '$thing'";
