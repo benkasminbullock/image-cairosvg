@@ -155,14 +155,14 @@ sub _render
 	# Put the title into the output PNG as text, etc.
 	return;
     }
-    my $attr = $self->_draw ($element, $pattr);
+    my ($attr, $restore) = $self->_draw ($element, $pattr);
     $self->{depth}++;
     my $child = $element->{child};
     for (@$child) {
 	$self->_render ($_, $attr);
     }
     $self->{depth}--;
-    $self->_draw_end ($element);
+    $self->_draw_end ($element, $restore);
 }
 
 # Extract the ID in an href from a list of attributes. This has to
@@ -267,7 +267,7 @@ sub _draw
 	$self->msg ("_clipping, not rendering");
 	$nodraw = true;
     }
-    $self->do_svg_attr (%attr);
+    my $restore = $self->do_svg_attr (%attr);
     if ($tag eq 'svg' || $tag eq 'g') {
 	# These are non-rendering, i.e. don't result in visual output.
 	$nodraw = true;
@@ -318,7 +318,7 @@ sub _draw
     if (! $nodraw) {
 	$self->do_fill_stroke (\%attr);
     }
-    return \%attr;
+    return (\%attr, $restore);
 }
 
 sub do_clip_path
@@ -351,13 +351,10 @@ sub do_clip_path
 
 sub _draw_end
 {
-    my ($self, $element) = @_;
+    my ($self, $element, $restore) = @_;
     my $tag = $element->{tag};
     $self->msg ("</$tag>");
-    # Only use the actual attributes, not the inherited ones, although
-    # the transform attribute is probably not inherited.
-    my $attr = $element->{attr};
-    if ($attr->{transform}) {
+    if ($restore) {
 	my $cr = $self->{cr};
 	$cr->restore ();
     }
@@ -909,12 +906,26 @@ sub svg_units
 
 my $fpnum = qr!-?(?:[0-9]*\.[0-9]+|0|[0-9]+)!;
 
+# Save the drawing context if necessary.
+
+sub save
+{
+    my ($self, $restore_ref) = @_;
+    if (! $$restore_ref) {
+	my $cr = $self->{cr};
+	$cr->save ();
+	$$restore_ref = 1;
+    }
+}
+
 # We have a path in the cairo surface and now we have to do the SVG
 # instructions specified by "%attr".
 
 sub do_svg_attr
 {
     my ($self, %attr) = @_;
+
+    my $restore;
 
     # Copy attributes from "self".
 
@@ -939,24 +950,28 @@ sub do_svg_attr
     my $cr = $self->{cr};
     my $stroke_width = $attr{"stroke-width"};
     if ($stroke_width) {
+	$self->save (\$restore);
 	$stroke_width = svg_units ($stroke_width);
 	$cr->set_line_width ($stroke_width);
     }
     my $linecap = $attr{"stroke-linecap"};
     if ($linecap) {
+	$self->save (\$restore);
 	$cr->set_line_cap ($linecap);
     }
     my $linejoin = $attr{"stroke-linejoin"};
     if ($linejoin) {
+	$self->save (\$restore);
 	$cr->set_line_join ($linejoin);
     }
     my $transform = $attr{transform};
     if ($transform) {
-	$cr->save ();
+	$self->save (\$restore);
 	$self->do_transforms (%attr);
     }
     my $fill_rule = $attr{'fill-rule'};
     if ($fill_rule) {
+	$self->save (\$restore);
 	# Cairo supports the same two things as SVG, but with
 	# different names.
 	if ($fill_rule eq 'nonzero') {
@@ -971,6 +986,7 @@ sub do_svg_attr
     }
     my $miterlimit = $attr{'stroke-miterlimit'};
     if (defined $miterlimit) {
+	$self->save (\$restore);
 	$cr->set_miter_limit ($miterlimit);
     }
     my $clip_path = $attr{'clip-path'};
@@ -980,6 +996,7 @@ sub do_svg_attr
     my $stroke_dashoffset = $attr{'stroke-dashoffset'};
     my $stroke_dasharray = $attr{'stroke-dasharray'};
     if ($stroke_dasharray) {
+	$self->save (\$restore);
 	my @sd;
 	while ($stroke_dasharray =~ /($fpnum)/g) {
 	    push @sd, $1;
@@ -989,6 +1006,7 @@ sub do_svg_attr
 	}
 	$cr->set_dash ($stroke_dashoffset, @sd);
     }
+    return $restore;
 }
 
 # The reason this is as complicated as it is is because SVG accepts
