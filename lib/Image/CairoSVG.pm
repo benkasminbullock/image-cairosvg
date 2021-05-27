@@ -144,7 +144,8 @@ my %no_render = (
     title => true,
 );
 
-# Actually render
+# This is the rendering routine for an element and its children. The
+# rendering routine for individual objects is "_draw".
 
 sub _render
 {
@@ -164,6 +165,9 @@ sub _render
     $self->_draw_end ($element);
 }
 
+# Extract the ID in an href from a list of attributes. This has to
+# deal with both xlink:href and href.
+
 sub x_id
 {
     my (%attr) = @_;
@@ -178,6 +182,9 @@ sub x_id
     $id =~ s/^#//;
     return $id;
 }
+
+# Process a <use> element. We can't easily call this routine "use"
+# since that is a Perl keyword.
 
 sub processUse
 {
@@ -209,6 +216,9 @@ sub processUse
 	$cr->restore ();
     }
 }
+
+# This is the rendering routine for individual items in the SVG
+# document such as a circle.
 
 sub _draw
 {
@@ -874,6 +884,9 @@ sub svg_units_scale
     if (looks_like_number ($thing)) {
 	return ($thing, 1);
     }
+    if ($thing =~ /([0-9\.]+)%$/) {
+	return (undef,1);
+    }
     if ($thing =~ /([0-9\.]+)(\w+)$/) {
 	my $number = $1;
 	my $unit = $2;
@@ -1324,14 +1337,27 @@ sub name2colour
     my ($colour) = @_;
     my $c = $color2rgb{lc $colour};
     if (! $c) {
+	warn "Unknown colour $colour";
 	return @defaultrgb;
     }
-    return map {$_/256} @$c;
+    return map {$_/255} @$c;
 }
 
 # Hex digit
 my $h = qr/[0-9a-f]/i;
 my $hh = qr/$h$h/;
+# One argument of an rgb() command.
+my $rgb = qr/[0-9\.]+%?/;
+my $com = qr/\s*,\s*/;
+
+sub rgb
+{
+    my ($val) = @_;
+    if ($val =~ s/%$//) {
+	return $val / 100;
+    }
+    return $val / 255;
+}
 
 sub string_to_rgb
 {
@@ -1351,6 +1377,9 @@ sub string_to_rgb
     }
     elsif ($colour =~ /^#($hh)($hh)($hh)$/) {
 	@c = (hex ($1)/255, hex ($2)/255, hex ($3)/255);
+    }
+    elsif ($colour =~ /^rgb\s*\(($rgb)$com($rgb)$com($rgb)\)\s*$/) {
+	@c = (rgb ($1), rgb ($2), rgb ($3));
     }
     else {
 	@c = name2colour ($colour);
