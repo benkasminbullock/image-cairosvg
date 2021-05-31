@@ -3,10 +3,10 @@ use warnings;
 use strict;
 use utf8;
 
-our $VERSION = '0.21';
+our $VERSION = '0.22';
 
 # Core modules
-use Carp qw/carp croak confess/;
+use Carp qw/carp croak confess cluck/;
 use Math::Trig qw!acos pi rad2deg deg2rad tan!;
 use Scalar::Util 'looks_like_number';
 
@@ -255,7 +255,7 @@ sub _draw
 	stroke-opacity
 	stroke-width
     !) {
-	if ($pattr->{$key} && ! $attr{$key}) {
+	if ($pattr->{$key} && ! defined $attr{$key}) {
 	    $attr{$key} = $pattr->{$key};
 	}
     }
@@ -295,6 +295,8 @@ sub _draw
     }
     elsif ($tag eq 'use') {
 	$self->processUse (%attr);
+	# The element is rendered within processUse.
+	$nodraw = true;
     }
     elsif ($tag eq 'defs') {
 	# Throw an exception. Arriving here is a bug, we should have
@@ -1138,12 +1140,6 @@ sub multiply
     $cr->set_matrix ($matrix);
 }
 
-sub linearGradient
-{
-    my ($self, %attr) = @_;
-
-}
-
 sub do_fill_stroke
 {
     my ($self, $attr) = @_;
@@ -1174,7 +1170,7 @@ sub do_fill_stroke
 	    $self->msg ("Filling with $fill");
 	    $self->set_colour ($stroke, $stroke_opacity);
 	    $cr->stroke ();
-	    $self->msg ("Stroking with $stroke");
+	    $self->msg ("Stroking after fill with $stroke");
 	}
 	else {
 	    $self->set_colour ($fill, $fill_opacity);
@@ -1184,7 +1180,7 @@ sub do_fill_stroke
     }
     elsif ($stroke && $stroke ne 'none') {
 	$self->set_colour ($stroke, $stroke_opacity);
-	$self->msg ("Stroking with $stroke");
+	$self->msg ("Stroking only with $stroke");
 	$cr->stroke ();
     }
     elsif (! $fill && ! $stroke) {
@@ -1417,6 +1413,7 @@ sub set_colour
     }
     my @c = string_to_rgb ($colour);
     if (defined $opacity) {
+	$self->msg ("Setting opacity to $opacity");
 	if ($opacity > 1 || $opacity < 0) {
 	    carp "Opacity value $opacity out of bounds";
 	    $opacity = 1;
@@ -1428,21 +1425,31 @@ sub set_colour
     }
 }
 
-my @linearDefaults = (
-    '0%',
-    '100%',
-    '0%',
-    '0%',
+# https://developer.mozilla.org/en-US/docs/Web/SVG/Element/linearGradient
+
+my %linearDefaults = (
+    x1 => '0%',
+    y1 => '0%',
+    x2 => '100%',
+    y2 => '0%',
 );
 
-my @radialDefaults = (
-    '50%',
-    '50%',
-    '0%',
-    '50%',
-    '50%',
-    '50%',
+# https://developer.mozilla.org/en-US/docs/Web/SVG/Element/radialGradient
+
+my %radialDefaults = (
+    cx => '50%',
+    cy => '50%',
+    fr => '0%',
+    r => '50%',
+    # These should be set to the values of cx and cy if they are not
+    # defined separately.
+    fx => 'error',
+    fy => 'error',
 );
+
+# These are the arguments in the order which Cairo requires.
+
+my @rgargs = qw!fx fy fr cx cy r!;
 
 sub use_gradient
 {
@@ -1464,11 +1471,14 @@ sub use_gradient
     }
     my ($x1, $y1, $x2, $y2) = $cr->fill_extents ();
     if ($tag eq 'linearGradient') {
-	my @args = @linearDefaults;
+	my @args;
 	my $i = 0;
 	for (qw!x1 y1 x2 y2!) {
 	    if ($attr->{$_}) {
 		$args[$i] = $attr->{$_};
+	    }
+	    else {
+		$args[$i] = $linearDefaults{$_};
 	    }
 	    $i++;
 	}
@@ -1485,40 +1495,50 @@ sub use_gradient
 	    $args[2] = adjust ($args[2], $x1, $xdiff);
 	    $args[3] = adjust ($args[3], $y1, $ydiff);
 	}
+	$self->msg ("Linear gradient arguments: @args");
 	$pat = Cairo::LinearGradient->create (@args);
 	read_stops ($children, $pat);
 	$cr->set_source ($pat);
 	return;
     }
     elsif ($tag eq 'radialGradient') {
-	my @args = @radialDefaults;
-	my $i = 0;
-	for (qw!fx fy fr cx cy r!) {
+	my %args;
+	for (@rgargs) {
 	    if ($attr->{$_}) {
-		$args[$i] = $attr->{$_};
+		$args{$_} = $attr->{$_};
 	    }
-	    $i++;
+	    else {
+		$args{$_} = $radialDefaults{$_};
+	    }
 	}
-	for (@args) {
-	    if ($_ =~ s/\%$//) {
-		$_ /= 100;
+	if (! defined $attr->{fx}) {
+	    $args{fx} = $args{cx};
+	}
+	if (! defined $attr->{fy}) {
+	    $args{fy} = $args{cy};
+	}
+	for (@rgargs) {
+	    if ($args{$_} =~ s/\%$//) {
+		$args{$_} /= 100;
 	    }
 	}
 	if (! $noscale) {
 	    my $xdiff = $x2 - $x1;
 	    my $ydiff = $y2 - $y1;
 	    my $rdiff = $xdiff;
-	    if ($rdiff > $ydiff) {
-		$rdiff = $ydiff;
+	    if ($xdiff != $ydiff) {
+		$rdiff = sqrt (($xdiff ** 2 + $ydiff ** 2)/2);
 	    }
-	    $args[0] = adjust ($args[0], $x1, $xdiff);
-	    $args[1] = adjust ($args[1], $y1, $ydiff);
-	    $args[2] = adjust ($args[2], 0, $rdiff);
-	    $args[3] = adjust ($args[3], $x1, $xdiff);
-	    $args[4] = adjust ($args[4], $y1, $ydiff);
-	    $args[5] = adjust ($args[5], 0, $rdiff);
+	$self->msg ("Radial gradient arguments: @args{@rgargs}\n");
+	    $args{fx} = adjust ($args{fx}, $x1, $xdiff);
+	    $args{fy} = adjust ($args{fy}, $y1, $ydiff);
+	    $args{fr} = adjust ($args{fr},   0, $rdiff);
+	    $args{cx} = adjust ($args{cx}, $x1, $xdiff);
+	    $args{cy} = adjust ($args{cy}, $y1, $ydiff);
+	    $args{r}  = adjust ($args{r},    0, $rdiff);
 	}
-	$pat = Cairo::RadialGradient->create (@args);
+	$self->msg ("Radial gradient arguments: @args{@rgargs}\n");
+	$pat = Cairo::RadialGradient->create (@args{@rgargs});
 	read_stops ($children, $pat);
 	$cr->set_source ($pat);
 	return;
