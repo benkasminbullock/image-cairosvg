@@ -120,6 +120,14 @@ If a Cairo context and a surface are both supplied, the value of
 C<surface> is ignored, a warning is printed, and the image is drawn
 using only the C<context> value.
 
+If you supply your own Cairo context, when you render an SVG which
+uses the default (unspecified) values for such things as
+C<stroke-width> or C<stroke-miterlimit>, the values of your Cairo
+context will be used unaltered, which will result in incorrect
+renderings in some cases. To avoid this, you can set all the default
+values of a Cairo context to SVG default values rather than Cairo
+default values using the function L</set_svg_defaults>.
+
 =back
 
 For simple drawing tasks, we recommend using the default surface
@@ -247,6 +255,24 @@ C<$cairosvg>.
 If the rectangle has rounded corners (a non-zero C<rx> attribute), a
 shim function is used to draw the rectangle, since Cairo has no native
 support for rectangles with rounded corners.
+
+=head1 FUNCTIONS
+
+=head2 set_svg_defaults
+
+    set_svg_defaults ($cr);
+
+Set Cairo context C<$cr> with the SVG default values, which are
+different to the Cairo ones. For example SVG has a default line width
+for strokes (the default value of C<stroke-width>) of 1, but Cairo has
+a default value of 2.
+
+This function only needs to be called if you supply your own context
+in L</new>. If the user does not supply a context in L</new>, one is
+created which uses this function to set all its defaults to the SVG
+values.
+
+Since version 0.23.
 
 =head1 DEPENDENCIES
 

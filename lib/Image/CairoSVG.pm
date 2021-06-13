@@ -3,6 +3,10 @@ use warnings;
 use strict;
 use utf8;
 
+require Exporter;
+our @ISA = qw(Exporter);
+our @EXPORT_OK = qw/set_svg_defaults/;
+
 our $VERSION = '0.22';
 
 # Core modules
@@ -36,6 +40,11 @@ use constant {
     # https://www.w3.org/TR/SVG11/painting.html#StrokeMiterlimitProperty
     # https://svgwg.org/svg2-draft/painting.html#StrokeMiterlimitProperty
     SVG_MITERLIMIT => 4,
+    # SVG's default stroke-width is 1:
+    # https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/stroke-width
+    # but Cairo's default line width is 2:
+    # https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-set-line-width
+    SVG_STROKE_WIDTH => 1,
     true => 1,
     false => 0,
 };
@@ -96,7 +105,14 @@ sub make_cr
 	# We won't be able to do very much without a context.
 	croak "Cairo::Context->create failed";
     }
-    $self->{cr}->set_miter_limit (SVG_MITERLIMIT);
+    set_svg_defaults ($self->{cr});
+}
+
+sub set_svg_defaults
+{
+    my ($cr) = @_;
+    $cr->set_miter_limit (SVG_MITERLIMIT);
+    $cr->set_line_width (SVG_STROKE_WIDTH);
 }
 
 sub render
