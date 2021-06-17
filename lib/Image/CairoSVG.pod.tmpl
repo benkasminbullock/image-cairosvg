@@ -265,7 +265,9 @@ support for rectangles with rounded corners.
 Set Cairo context C<$cr> with the SVG default values, which are
 different to the Cairo ones. For example SVG has a default line width
 for strokes (the default value of C<stroke-width>) of 1, but Cairo has
-a default value of 2.
+a default value for line widths of 2, so using the default values of
+an unaltered Cairo context C<$cr> will result in inaccurate rendering
+of an SVG which uses defaults.
 
 This function only needs to be called if you supply your own context
 in L</new>. If the user does not supply a context in L</new>, one is
